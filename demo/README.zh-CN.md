@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-测试环境：2026-10-17，Windows、Node.js v26.10.0、Codex 内置桌面 Chromium。浏览器自检 97/97 通过，0 项跳过，覆盖 Full 和 Light 路径；其他浏览器和 GPU 帧率尚未验收。详细结果见 [VALIDATION.md](VALIDATION.md)。
+测试环境：2026-10-17，Windows、Node.js v26.10.0、Codex 内置桌面 Chromium。浏览器自检 96/96 通过，0 项跳过，覆盖 Full 和 Light 路径；其他浏览器和 GPU 帧率尚未验收。详细结果见 [VALIDATION.md](VALIDATION.md)。
 
 [English](README.md) · 中文
 
@@ -10,7 +10,7 @@ Designed for websites。根目录只保留 `glass.js` 和 `glass.css`，演示�
 
 ![液态玻璃效果预览](preview.png)
 
-这个效果最初用在聊天界面上，后来整理成了可以单独接入的两个文件。卡片有一圈较细的 45° 高光，鼠标移入时会出现跟随光斑，移出后光斑隐藏。它不需要前端框架、npm 依赖、CDN 或 WebGL。
+这个效果最初用在聊天界面上，后来整理成了可以单独接入的两个文件。鼠标移入时会出现跟随光斑，移出后光斑隐藏。它不需要前端框架、npm 依赖、CDN 或 WebGL。
 
 ## 先跑起来
 
@@ -55,7 +55,7 @@ node demo/server.mjs
 </html>
 ```
 
-选一张有线条、明暗或纹理的背景，会更容易看出边缘折射。样式只作用于 `.lg-glass`，不重置页面布局、字体和按钮。两个伪元素 `::before` / `::after` 分别用来画鼠标光斑和边缘高光，接入时留意已有组件是否占用了它们。
+选一张有线条、明暗或纹理的背景，会更容易看出边缘折射。样式只作用于 `.lg-glass`，不重置页面布局、字体和按钮。`::before` 伪元素用来画鼠标光斑，接入时留意已有组件是否占用了它。
 
 ## 控制效果
 
@@ -105,11 +105,10 @@ glass.destroy();                 // 释放监听器、观察器、RAF、定时�
   --lg-glow-width: 210px;    /* 光斑横向渐变半径 */
   --lg-glow-height: 130px;   /* 光斑纵向渐变半径 */
   --lg-glow-opacity: 1;      /* 光斑显示时的不透明度 */
-  --lg-rim-opacity: 1;       /* 45° 边缘高光不透明度 */
 }
 ```
 
-默认 RGB 位移强度是 `82 / 96 / 110`，边缘作用带默认上限 58 个 CSS 像素（短卡片按比例收窄；贴图降采样时同比缩小）。45° 高光环宽 1px，鼠标光斑默认 210×130。继续调整光学形态时，可以查看 `glass.js` 的 `makeDisplacementMap`、`ensureFilter`，以及 `glass.css`。
+默认 RGB 位移强度是 `82 / 96 / 110`，边缘作用带默认上限 58 个 CSS 像素（短卡片按比例收窄；贴图降采样时同比缩小）。鼠标光斑的渐变半径默认 210/130px。继续调整光学形态时，可以查看 `glass.js` 的 `makeDisplacementMap`、`ensureFilter`，以及 `glass.css`。
 
 ## 浏览器自检
 
@@ -120,7 +119,7 @@ const { runParameterChecks } = await import('./parameters-checks.js');
 await runParameterChecks(document.querySelector('#check-results'));
 ```
 
-输出 PASS/FAIL/SKIP，覆盖 optics 校验与钳制、贴图边缘宽度、通道强度和光斑/高光变量。环境回退、不支持 Full 时，相关光学检查会标记为 SKIP。`checks.js` 负责控制器生命周期。
+输出 PASS/FAIL/SKIP，覆盖 optics 校验与钳制、贴图边缘宽度、通道强度和光斑变量。环境回退、不支持 Full 时，相关光学检查会标记为 SKIP。`checks.js` 负责控制器生命周期。
 
 ## 实现和开销
 

@@ -159,7 +159,7 @@ export async function runParameterChecks(output) {
       check('dispersion 上限钳制为 50', maxDispersion.scales.join(',') === '0,0,50', maxDispersion.scales.join(','));
     }
 
-    // 3. 光斑与高光的 CSS 变量（纯 CSS 层，不依赖 Full 路径）。
+    // 3. 光斑 CSS 变量（纯 CSS 层，不依赖 Full 路径）。
     const cssCard = document.createElement('div');
     cssCard.className = 'lg-glass';
     cssCard.style.cssText = 'width:300px;height:200px';
@@ -170,7 +170,7 @@ export async function runParameterChecks(output) {
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (reducedTransparency) {
-      skip('光斑与高光 CSS 变量', '系统要求减少透明度，装饰伪元素已隐藏');
+      skip('光斑 CSS 变量', '系统要求减少透明度，装饰伪元素已隐藏');
     } else {
       if (reducedMotion) {
         skip('光斑 CSS 变量', '系统要求减少动画，光斑已隐藏');
@@ -191,16 +191,10 @@ export async function runParameterChecks(output) {
         await wait(180);
         check('隐藏状态的光斑不透明度为 0', Number(pseudo('::before').opacity) === 0, pseudo('::before').opacity);
       }
-      check('高光默认不透明度为 1', Number(pseudo('::after').opacity) === 1, pseudo('::after').opacity);
-      cssCard.style.setProperty('--lg-rim-opacity', '.35');
-      await wait(30);
-      check('高光不透明度可覆盖', Math.abs(Number(pseudo('::after').opacity) - .35) < .01,
-        pseudo('::after').opacity);
+      check('边缘高光装饰已移除', ['none', 'normal'].includes(pseudo('::after').content));
       cssCard.style.removeProperty('--lg-glow-width'); cssCard.style.removeProperty('--lg-glow-height');
-      cssCard.style.removeProperty('--lg-rim-opacity');
-      cssHost.style.setProperty('--lg-glow-width', '280px'); cssHost.style.setProperty('--lg-rim-opacity', '.45');
-      check('容器级材质变量可以继承', ellipse(pseudo('::before').backgroundImage, 280, 130)
-        && Math.abs(Number(pseudo('::after').opacity) - .45) < .01);
+      cssHost.style.setProperty('--lg-glow-width', '280px');
+      check('容器级材质变量可以继承', ellipse(pseudo('::before').backgroundImage, 280, 130));
     }
 
     // 4. 指针退出仍会取消尚未绘制的光斑；自定义不透明度不改变隐藏状态。

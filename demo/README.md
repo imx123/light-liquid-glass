@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-Test environment: 2026-10-17, Windows, Node.js v26.10.0, Codex desktop Chromium. Browser checks passed 97/97 with 0 skipped, covering Full and Light. Other browsers and GPU frame rates remain unverified. See [VALIDATION.md](VALIDATION.md).
+Test environment: 2026-10-17, Windows, Node.js v26.10.0, Codex desktop Chromium. Browser checks passed 96/96 with 0 skipped, covering Full and Light. Other browsers and GPU frame rates remain unverified. See [VALIDATION.md](VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
@@ -10,7 +10,7 @@ Designed for websites. The repository root contains only `glass.js` and `glass.c
 
 ![Liquid glass preview](preview.png)
 
-The effect started in a chat interface and is packaged as two files. A thin rim catches light at 45°, and a soft glow follows the pointer while it is inside a panel. The glow disappears on exit. There are no framework, npm, CDN or WebGL dependencies.
+The effect started in a chat interface and is packaged as two files. A soft glow follows the pointer while it is inside a panel. The glow disappears on exit. There are no framework, npm, CDN or WebGL dependencies.
 
 ## Run the demo
 
@@ -36,7 +36,7 @@ Copy `glass.css` and `glass.js` into your static assets. Keep your existing serv
 </script>
 ```
 
-A detailed backdrop makes refraction easier to see. The stylesheet only targets `.lg-glass`; it does not reset body styles, controls or layout. Both pseudo-elements are used for decoration, so check for conflicts with existing components.
+A detailed backdrop makes refraction easier to see. The stylesheet only targets `.lg-glass`; it does not reset body styles, controls or layout. The ::before pseudo-element draws the pointer glow; check for conflicts with existing components.
 
 ## Control the material
 
@@ -52,7 +52,7 @@ The first `onChange` runs synchronously during construction. If it or setup thro
 
 The engine does not read application storage or save preferences. `demo.js` contains the selector and localStorage example.
 
-CSS variables are `--lg-radius` (28px), `--lg-center-blur` (.6px), `--lg-frost-blur` (6px), `--lg-tint`, `--lg-solid`, `--lg-glow-width` (210px), `--lg-glow-height` (130px), `--lg-glow-opacity` (1) and `--lg-rim-opacity` (1). The default RGB displacement scales are 82/96/110, with an edge band up to 58 CSS pixels and a 1px rim. Full examples are in the [Chinese guide](README.zh-CN.md).
+CSS variables are `--lg-radius` (28px), `--lg-center-blur` (.6px), `--lg-frost-blur` (6px), `--lg-tint`, `--lg-solid`, `--lg-glow-width` (210px), `--lg-glow-height` (130px), `--lg-glow-opacity` (1). The default RGB displacement scales are 82/96/110, with an edge band up to 58 CSS pixels. Full examples are in the [Chinese guide](README.zh-CN.md).
 
 ## Browser checks
 
@@ -63,7 +63,7 @@ const { runParameterChecks } = await import('./parameters-checks.js');
 await runParameterChecks(document.querySelector('#check-results'));
 ```
 
-The module reports PASS/FAIL/SKIP lines for optics validation, clamping, map edge width, channel scales and the glow/rim variables. It skips optical checks when the environment falls back from Full. `checks.js` covers the controller lifecycle.
+The module reports PASS/FAIL/SKIP lines for optics validation, clamping, map edge width, channel scales and the glow variables. It skips optical checks when the environment falls back from Full. `checks.js` covers the controller lifecycle.
 
 ## How it works
 
@@ -87,7 +87,7 @@ A strict CSP must allow the local modules, generated `data:` images and required
 
 ## Files and checks
 
-`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. The five check modules cover controller behavior, exceptions, parameters, quality and integration. Click “运行全部自检” to run all 97 checks. `benchmark.mjs` compares map math and CPU time. `manifest.sha256` lists file hashes. The preview lives in `preview.png`.
+`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. The five check modules cover controller behavior, exceptions, parameters, quality and integration. Click “运行全部自检” to run all 96 checks. `benchmark.mjs` compares map math and CPU time. `manifest.sha256` lists file hashes. The preview lives in `preview.png`.
 
 Code and documentation were written with AI assistance. The demo background is AI generated.
 

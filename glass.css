@@ -1,16 +1,13 @@
 /* Liquid Glass v2：只作用于 .lg-glass，不重置 body、标题、按钮或布局。 */
-.lg-glass { --lg-mx: 50%; --lg-my: 20%; position: relative; isolation: isolate; border: 1px solid #d6e2ff30; border-radius: var(--lg-radius, 28px); background: var(--lg-tint, linear-gradient(135deg, #c2ceff1e, #23315388 65%, #bbc6ff10)); backdrop-filter: blur(var(--lg-frost-blur, 6px)) saturate(125%); -webkit-backdrop-filter: blur(var(--lg-frost-blur, 6px)) saturate(125%); box-shadow: inset 0 1px 0 #ffffff24, 0 18px 50px #03081635; }
+.lg-glass { --lg-mx: 50%; --lg-my: 20%; position: relative; isolation: isolate; border: 1px solid transparent; border-radius: var(--lg-radius, 28px); background: var(--lg-tint, linear-gradient(135deg, #c2ceff1e, #23315388 65%, #bbc6ff10)); backdrop-filter: blur(var(--lg-frost-blur, 6px)) saturate(125%); -webkit-backdrop-filter: blur(var(--lg-frost-blur, 6px)) saturate(125%); box-shadow: 0 18px 50px #03081635; }
 .lg-glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; opacity: 0; transition: opacity 120ms ease-out; background: radial-gradient(ellipse var(--lg-glow-width, 210px) var(--lg-glow-height, 130px) at var(--lg-mx) var(--lg-my), #f1f5ff52 0%, #d5e7ff2e 30%, #cbdfff0c 58%, transparent 78%); }
 .lg-glass[data-pointer-light="true"]::before { opacity: var(--lg-glow-opacity, 1); }
-/* 固定 45° 光源的高光环；遮罩只露出边缘，不覆盖文字和点击区域。 */
-.lg-glass::after { content: ""; position: absolute; inset: -1px; padding: 1px; border-radius: inherit; pointer-events: none; z-index: 2; opacity: var(--lg-rim-opacity, 1); background: linear-gradient(45deg, #f8fdff70 0%, #bfeaff38 15%, #e8f2ff08 34%, #050d2233 49%, #d3e8ff0c 66%, #ffffff70 87%, #c9e9ff80 100%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-.lg-glass:not([data-lg-mode="solid"]) { border-color: #e5f0ff32; box-shadow: inset 2px 2px 5px #ffffff1c, inset -2px -2px 6px #c7ddff12, inset 7px -7px 18px #02081950, inset -7px 7px 18px #07132d45, 0 16px 44px #02061159; }
+.lg-glass:not([data-lg-mode="solid"]) { box-shadow: inset 7px -7px 18px #02081950, inset -7px 7px 18px #07132d45, 0 16px 44px #02061159; }
 .lg-glass[data-lg-mode="solid"] { background: var(--lg-solid, #1b253b); backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .lg-glass[data-lg-mode="solid"]::before { display: none; }
-.lg-glass[data-lg-mode="solid"]::after { display: none; }
 
 @media (prefers-reduced-motion: reduce) { .lg-glass::before { display: none; } }
 @media (prefers-reduced-transparency: reduce) {
   .lg-glass { background: var(--lg-solid, #1b253b); backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-  .lg-glass::before, .lg-glass::after { display: none; }
+  .lg-glass::before { display: none; }
 }
