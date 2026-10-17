@@ -12,7 +12,7 @@
   <main>
     <header class="topbar lg-glass" data-liquid-glass>
       <a class="brand" href="#home">◈ LIGHT / LIQUID GLASS</a>
-      <div class="quality-control"><label for="quality">效果类型</label><select id="quality"><option value="auto">自动</option><option value="full">液态折射</option><option value="frost">毛玻璃</option><option value="solid">纯色</option></select></div>
+      <div class="quality-control"><label for="quality">效果类型</label><select id="quality"><option value="auto">自动</option><option value="full">液态折射</option><option value="light">轻量折射</option><option value="frost">毛玻璃</option><option value="solid">纯色</option></select></div>
     </header>
     <section id="home" class="intro">
       <p class="eyebrow">NATIVE CSS + SVG + CANVAS</p>
@@ -37,11 +37,11 @@
     <section class="tools" aria-label="运行检查">
       <button type="button" id="add-card">添加卡片</button>
       <button type="button" id="remove-card">移除新增卡片</button>
-      <button type="button" id="checks">运行自检</button>
+      <button type="button" id="checks">运行全部自检</button>
       <a href="README.zh-CN.md">阅读接入说明 ↗</a>
-      <pre id="check-results" role="status">可检查模式切换、缓存、挂载/卸载、鼠标退出和销毁清理。</pre>
+      <pre id="check-results" role="status">检查效果参数、模式切换、Auto 预算、鼠标退出和异常清理。</pre>
     </section>
-    <footer>Full 需要兼容的桌面 Chromium；其他环境自动回退。性能上限需按实际设备测量。</footer>
+    <footer>Full / Light 需要兼容的桌面 Chromium；Auto 按可视面积分配，其他环境自动回退。预算只是布局启发式，性能需按实际设备测量。</footer>
   </main>
 </body>
 </html>
