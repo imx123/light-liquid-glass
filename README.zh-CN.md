@@ -1,14 +1,14 @@
 # light-liquid-glass
 
-测试环境：2026-10-17，Windows、Node.js v26.10.0、Codex 内置桌面 Chromium。浏览器自检 96/96 通过，0 项跳过，覆盖 Full 和 Light 路径；其他浏览器和 GPU 帧率尚未验收。详细结果见 [VALIDATION.md](VALIDATION.md)。
+测试环境：2026-10-17，Windows、Node.js v26.10.0、Codex 内置桌面 Chromium。浏览器自检 96/96 通过，0 项跳过，覆盖 Full 和 Light 路径；其他浏览器和 GPU 帧率尚未验收。详细结果见 [VALIDATION.md](demo/VALIDATION.md)。
 
 [English](README.md) · 中文
 
 一个用原生 HTML、CSS 和 JavaScript 实现的液态玻璃效果。背景经过卡片边缘时会弯曲，并出现轻微的 RGB 色散；中间只保留一点模糊，让背景细节还能看清。
 
-Designed for websites。根目录只保留 `glass.js` 和 `glass.css`，演示、文档、背景图和检查脚本都放在 `demo/`。下面的命令从仓库根目录运行。
+Designed for websites。核心文件和中英文 README 放在根目录，演示、验证记录、背景图和检查脚本放在 `demo/`。下面的命令从仓库根目录运行。
 
-![液态玻璃效果预览](preview.png)
+![液态玻璃效果预览](demo/preview.png)
 
 这个效果最初用在聊天界面上，后来整理成了可以单独接入的两个文件。鼠标移入时会出现跟随光斑，移出后光斑隐藏。它不需要前端框架、npm 依赖、CDN 或 WebGL。
 
@@ -142,6 +142,8 @@ Canvas 在初始化或尺寸变化时生成一张位移贴图；`full` 的 SVG �
 如果项目有严格 CSP，需要允许本地模块、生成贴图的 `data:` 图片和必要的动态 style 更新。保留现有保护，只增加所需规则。使用文件白名单的静态服务需要登记效果文件和背景图。
 
 ## 文件
+
+除核心文件外，下表中的文件都位于 `demo/`。
 
 | 文件 | 用途 |
 | --- | --- |

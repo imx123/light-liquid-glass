@@ -7,6 +7,10 @@ const names = ['index.html', 'glass.css', 'glass.js', 'demo.css', 'demo.js', 'ch
 const files = new Map(names.map(name => ['/' + name, name])); files.set('/', 'index.html');
 files.set('/glass.js', '../glass.js');
 files.set('/glass.css', '../glass.css');
+files.set('/README.md', '../README.md');
+files.set('/README.zh-CN.md', '../README.zh-CN.md');
+files.set('/demo/VALIDATION.md', 'VALIDATION.md');
+files.set('/demo/preview.png', 'preview.png');
 const port = Number(process.env.PORT || 4178);
 createServer(async (req, res) => {
   if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405); res.end(); return; }

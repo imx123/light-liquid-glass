@@ -1,14 +1,14 @@
 # light-liquid-glass
 
-Test environment: 2026-10-17, Windows, Node.js v26.10.0, Codex desktop Chromium. Browser checks passed 96/96 with 0 skipped, covering Full and Light. Other browsers and GPU frame rates remain unverified. See [VALIDATION.md](VALIDATION.md).
+Test environment: 2026-10-17, Windows, Node.js v26.10.0, Codex desktop Chromium. Browser checks passed 96/96 with 0 skipped, covering Full and Light. Other browsers and GPU frame rates remain unverified. See [VALIDATION.md](demo/VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
 A small liquid glass effect for plain HTML, CSS and JavaScript. It bends the backdrop near rounded edges, separates the RGB channels slightly, and keeps the center mostly clear.
 
-Designed for websites. The repository root contains only `glass.js` and `glass.css`; demo assets, documentation and checks live in `demo/`. Run the commands below from the repository root.
+Designed for websites. The core files and both READMEs live at the repository root; demo assets, validation notes and checks are in `demo/`. Run the commands below from the repository root.
 
-![Liquid glass preview](preview.png)
+![Liquid glass preview](demo/preview.png)
 
 The effect started in a chat interface and is packaged as two files. A soft glow follows the pointer while it is inside a panel. The glow disappears on exit. There are no framework, npm, CDN or WebGL dependencies.
 
@@ -75,7 +75,7 @@ Canvas generates a displacement map when geometry changes. Full's SVG filter sam
 
 A controller shares one ResizeObserver and one pointer animation frame. It caches up to eight maps by size and radius, so repeated refreshes and mode changes can reuse them. Map generation is capped at approximately 360,000 pixels; panels larger than 1,200,000 CSS pixels fall back to frost. Analytic normals reduce distance sampling, with finite differences retained at narrow seams to preserve the original shape.
 
-In the recorded 600×600 CPU sample, map calculation dropped from about 7.60ms to 4.59ms, roughly 40%. This measures pixel math and array writes only. PNG encoding, compositing and GPU sampling are excluded. Run `node demo/benchmark.mjs` to repeat the comparison; see [VALIDATION.md](VALIDATION.md) for the measurements. Three-channel dispersion still costs more GPU work than blur, so use it on a few main panels and keep ordinary lists frosted.
+In the recorded 600×600 CPU sample, map calculation dropped from about 7.60ms to 4.59ms, roughly 40%. This measures pixel math and array writes only. PNG encoding, compositing and GPU sampling are excluded. Run `node demo/benchmark.mjs` to repeat the comparison; see [VALIDATION.md](demo/VALIDATION.md) for the measurements. Three-channel dispersion still costs more GPU work than blur, so use it on a few main panels and keep ordinary lists frosted.
 
 ## Compatibility
 
@@ -86,6 +86,8 @@ Use equal, non-elliptical corner radii, preferably a px value for `--lg-radius`.
 A strict CSP must allow the local modules, generated `data:` images and required dynamic style updates. Keep the existing protections and add only the rules needed. Register the effect files and backdrop if your static server uses a whitelist. The included background, demo and server are optional.
 
 ## Files and checks
+
+Demo files, checks and the validation record are under `demo/`.
 
 `glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. The five check modules cover controller behavior, exceptions, parameters, quality and integration. Click “运行全部自检” to run all 96 checks. `benchmark.mjs` compares map math and CPU time. `manifest.sha256` lists file hashes. The preview lives in `preview.png`.
 
