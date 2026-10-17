@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Light Liquid Glass</title>
+  <link rel="stylesheet" href="glass.css">
+  <link rel="stylesheet" href="demo.css">
+  <script type="module" src="demo.js"></script>
+</head>
+<body>
+  <main>
+    <header class="topbar lg-glass" data-liquid-glass>
+      <a class="brand" href="#home">◈ LIGHT / LIQUID GLASS</a>
+      <div class="quality-control"><label for="quality">效果类型</label><select id="quality"><option value="auto">自动</option><option value="full">液态折射</option><option value="frost">毛玻璃</option><option value="solid">纯色</option></select></div>
+    </header>
+    <section id="home" class="intro">
+      <p class="eyebrow">NATIVE CSS + SVG + CANVAS</p>
+      <h1>看见玻璃的厚度。</h1>
+      <p>宽弧面折射 · RGB 边缘色散 · 45° 细高光</p>
+      <p id="state" role="status" aria-live="polite"></p>
+    </section>
+    <div id="cards" class="cards">
+      <article class="lg-glass card" data-liquid-glass>
+        <span class="number">01 / OPTICS</span><h2>弧面折射</h2>
+        <p>背景线条经过边缘时弯曲，中央保留轻模糊。把鼠标放到卡片上，观察柔和光斑；移出后光斑隐藏。</p>
+        <label for="note">试试输入和键盘焦点</label><input id="note" placeholder="装饰层不会挡住操作">
+        <button type="button" id="action">点击测试</button><p id="action-status" role="status"></p>
+      </article>
+      <article class="lg-glass card" data-liquid-glass>
+        <span class="number">02 / MATERIAL</span><h2>边缘有光，中心清晰。</h2>
+        <p>三通道以不同强度采样背景。色散集中在弧面边缘，卡片里的文字与控件不参与背景滤镜。</p>
+        <div class="chips"><span>0 个外部依赖</span><span>本地背景</span><span>动态挂载</span></div>
+        <div class="sample-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+      </article>
+    </div>
+    <section class="tools" aria-label="运行检查">
+      <button type="button" id="add-card">添加卡片</button>
+      <button type="button" id="remove-card">移除新增卡片</button>
+      <button type="button" id="checks">运行自检</button>
+      <a href="README.zh-CN.md">阅读接入说明 ↗</a>
+      <pre id="check-results" role="status">可检查模式切换、缓存、挂载/卸载、鼠标退出和销毁清理。</pre>
+    </section>
+    <footer>Full 需要兼容的桌面 Chromium；其他环境自动回退。性能上限需按实际设备测量。</footer>
+  </main>
+</body>
+</html>
