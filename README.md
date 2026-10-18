@@ -14,7 +14,7 @@ The effect started in a chat interface and is packaged as two files. A soft glow
 
 ## Run the demo
 
-With Node.js 18+, run `node demo/server.mjs` and open <http://localhost:4178>. The server binds to loopback only. The demo includes a mode selector, dynamic cards and a button to run the browser checks.
+With Node.js 18+, run `node demo/server.mjs` and open <http://localhost:4178>. The server binds to loopback only. Sliders control refraction (0–200), dispersion (0–50), edge width (1–120px) and liquid backdrop blur (0–12px, step 0.1). Values update during dragging; the effect applies on release. Arrow keys also work. Reset restores 110 / 14 / 44px / 3px while preserving input, dynamic cards and the current quality. Reloading restores default parameters. The demo also includes a mode selector and a button to run the browser checks.
 
 ## Add it to a page
 

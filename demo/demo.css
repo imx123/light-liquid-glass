@@ -18,6 +18,16 @@ button:disabled { opacity: .5; cursor: wait; }
 h1 { font-size: clamp(32px, 5vw, 58px); letter-spacing: -2px; margin: 15px 0; }
 .intro > p { color: #e1e3f5; }
 #state { min-height: 20px; font-size: 13px; }
+.parameter-controls { margin-bottom: 24px; padding: 20px 24px; border: 1px solid #d5ddf126; border-radius: 18px; background: #101a30ed; }
+.parameter-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.parameter-heading h2 { font-size: 18px; margin: 0 0 6px; }
+.parameter-heading p { margin: 0; color: #b9c4df; font-size: 12px; line-height: 1.6; }
+.parameter-heading button { font-size: 12px; padding: 9px 12px; }
+.parameter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.parameter-grid label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; margin-bottom: 10px; }
+.parameter-grid output { color: #a9e7ed; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.parameter-grid input[type="range"] { width: 100%; height: 24px; margin: 0; padding: 0; border: 0; background: transparent; accent-color: #a3dce8; cursor: pointer; }
+#parameter-state { font-size: 12px; color: #bdcce2; line-height: 1.6; margin: 12px 0 0; }
 .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .card { padding: 28px; min-width: 0; min-height: 350px; }
 .number { color: #c8bef2; letter-spacing: 2px; font-size: 11px; }
@@ -40,4 +50,5 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; color: #
 footer { padding: 24px 0; color: #c6cce0; font-size: 12px; line-height: 1.7; }
 html[data-demo-quality="solid"] body { background: #101727; }
 @media (max-width: 700px) { body { padding: 14px; } .cards { grid-template-columns: 1fr; } .card { padding: 24px; } .intro { padding-top: 36px; } .topbar { padding: 16px 20px; } }
+@media (max-width: 700px) { .parameter-controls { padding: 20px; } .parameter-grid { grid-template-columns: 1fr 1fr; gap: 18px; } }
 @media (prefers-reduced-transparency: reduce) { body { background: #101727; } }

@@ -6,14 +6,46 @@ const storageKey = 'liquid-glass-v2-demo-quality';
 let saved = 'auto';
 try { const value = localStorage.getItem(storageKey); if (['auto', 'full', 'light', 'frost', 'solid'].includes(value)) saved = value; } catch {}
 $('quality').value = saved;
-const glass = createLiquidGlass({ quality: saved, root: document.querySelector('main'), onChange(state) {
+const root = document.querySelector('main');
+const defaults = { refraction: 110, dispersion: 14, edgeWidth: 44, blur: 3 };
+let glass, applied;
+function reportState(state) {
   document.documentElement.dataset.demoQuality = state.quality;
   const layers = [];
   if (state.full) layers.push('液态折射 ' + state.full);
   if (state.light) layers.push('轻量折射 ' + state.light);
   $('state').textContent = layers.length ? layers.join(' · ') + ' · 共 ' + state.elements + ' 个玻璃面板'
     : state.solid ? '纯色模式 · 透明效果关闭' : '毛玻璃 · 兼容模式 · ' + state.elements + ' 个玻璃面板';
-}});
+}
+function readParameters() {
+  return Object.fromEntries(Object.keys(defaults).map(name => [name, Number($(name).value)]));
+}
+function showParameterValues() {
+  for (const name of Object.keys(defaults)) {
+    $(name + '-value').value = $(name).value + (['edgeWidth', 'blur'].includes(name) ? ' px' : '');
+  }
+}
+function applyParameters() {
+  const next = readParameters();
+  // 模糊通过继承变量更新；只有光学参数变化时重建控制器，不替换业务 DOM。
+  root.style.setProperty('--lg-center-blur', next.blur + 'px');
+  if (!glass || ['refraction', 'dispersion', 'edgeWidth'].some(name => next[name] !== applied[name])) {
+    glass?.destroy();
+    glass = createLiquidGlass({ root, quality: $('quality').value,
+      optics: { refraction: next.refraction, dispersion: next.dispersion, edgeWidth: next.edgeWidth }, onChange: reportState });
+  }
+  applied = next;
+  $('parameter-state').textContent = `已应用：折射 ${next.refraction} · 色散 ${next.dispersion} · 边缘 ${next.edgeWidth} px · 模糊 ${next.blur} px`;
+}
+for (const name of Object.keys(defaults)) {
+  $(name).addEventListener('input', showParameterValues);
+  $(name).addEventListener('change', applyParameters);
+}
+$('reset-parameters').addEventListener('click', () => {
+  for (const [name, value] of Object.entries(defaults)) $(name).value = value;
+  showParameterValues(); applyParameters();
+});
+showParameterValues(); applyParameters();
 $('quality').addEventListener('change', () => {
   glass.setQuality($('quality').value);
   try { localStorage.setItem(storageKey, $('quality').value); } catch {}
