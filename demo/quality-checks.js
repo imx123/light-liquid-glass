@@ -58,9 +58,9 @@ export async function runQualityChecks(output) {
           primitives.length === 2 && primitives[0] === 'feimage' && primitives[1] === 'fedisplacementmap',
           primitives.join(','));
         const displacement = lightFilter?.querySelector('feDisplacementMap');
-        check('light 单次采样 SourceGraphic 且 scale=96',
+        check('light 单次采样 SourceGraphic 且 scale=110',
           displacement?.getAttribute('in') === 'SourceGraphic' && displacement?.getAttribute('in2') === 'map'
-          && displacement?.getAttribute('scale') === '96' && displacement?.getAttribute('xChannelSelector') === 'R'
+          && displacement?.getAttribute('scale') === '110' && displacement?.getAttribute('xChannelSelector') === 'R'
           && displacement?.getAttribute('yChannelSelector') === 'G');
         check('light 不做通道拆分或颜色合成',
           !lightFilter?.querySelector('feColorMatrix') && !lightFilter?.querySelector('feComposite'));

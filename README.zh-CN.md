@@ -66,9 +66,9 @@ const glass = createLiquidGlass({
   root: document,               // 也可以传入一个已连接到页面的容器元素
   quality: 'auto',              // auto | full | light | frost | solid
   optics: {                     // 光学形态，可省略；下面是默认值
-    refraction: 96,             // 0..200
+    refraction: 110,             // 0..200
     dispersion: 14,             // 0..50
-    edgeWidth: 58               // 1..120，CSS 像素
+    edgeWidth: 44               // 1..120，CSS 像素
   },
   onChange(state) {
     console.log(state.quality, state.full, state.light, state.frost, state.solid);
@@ -83,9 +83,9 @@ glass.destroy();                 // 释放监听器、观察器、RAF、定时�
 
 `setQuality('full')` 或 `setQuality('light')` 会申请对应折射效果；环境不兼容时仍然回退。想让个别卡片一直使用毛玻璃，可以写 `data-liquid-glass="frost"`。
 
-`optics` 调整光学形态：`refraction` 默认 96（0 到 200），`dispersion` 默认 14（0 到 50），`edgeWidth` 默认 58（1 到 120）。字段只接受有限数字；字符串、`NaN`、`Infinity` 等会在创建控制器资源之前抛出 `TypeError`，有限值超出范围时限制到边界。大卡片的贴图降采样时，边缘带也同比缩小，保持 CSS 像素范围。要更换参数，先销毁旧控制器，再创建新控制器。
+`optics` 调整光学形态：`refraction` 默认 110（0 到 200），`dispersion` 默认 14（0 到 50），`edgeWidth` 默认 44（1 到 120）。字段只接受有限数字；字符串、`NaN`、`Infinity` 等会在创建控制器资源之前抛出 `TypeError`，有限值超出范围时限制到边界。大卡片的贴图降采样时，边缘带也同比缩小，保持 CSS 像素范围。要更换参数，先销毁旧控制器，再创建新控制器。
 
-正式版统一使用 Lens，旧宽弧面模型已移除。`D = dispersion / 50`，通道序号为 0、1、2 时，位移强度是 `refraction * (1 + (通道序号 - 1) * D * 0.006)`，默认约为 95.83872/96/96.16128。RGB 合成结果只按 `0.20 * D` 混入绿色通道的基准画面（D ≤ 0.001 时不混入），默认混合量为 5.6%。原有参数名和范围保留，色散数值的视觉含义已改变。
+正式版统一使用 Lens，旧宽弧面模型已移除。`D = dispersion / 50`，通道序号为 0、1、2 时，位移强度是 `refraction * (1 + (通道序号 - 1) * D * 0.006)`，默认约为 109.8152/110/110.1848。RGB 合成结果只按 `0.20 * D` 混入绿色通道的基准画面（D ≤ 0.001 时不混入），默认混合量为 5.6%。原有参数名和范围保留，色散数值的视觉含义已改变。
 
 尺寸变化会自动更新。动态增加或移除卡片后调用 `refresh()`；如果只改了圆角等样式，也主动调用一次。组件卸载时调用 `destroy()`，它会释放事件、观察器、动画帧、定时器、SVG 和缓存，并恢复接管前的 inline 样式与状态属性。重复销毁不会报错，需要再次使用时新建一个控制器。
 
@@ -100,7 +100,7 @@ glass.destroy();                 // 释放监听器、观察器、RAF、定时�
 ```css
 .my-panel {
   --lg-radius: 28px;
-  --lg-center-blur: .6px;    /* 液态模式中心轻模糊 */
+  --lg-center-blur: 3px;    /* 液态模式中心轻模糊 */
   --lg-frost-blur: 6px;      /* 毛玻璃模式模糊 */
   --lg-solid: #1b253b;
   --lg-tint: linear-gradient(135deg, #c2ceff1e, #23315388 65%, #bbc6ff10);
@@ -110,7 +110,7 @@ glass.destroy();                 // 释放监听器、观察器、RAF、定时�
 }
 ```
 
-边缘作用带默认上限 58 个 CSS 像素（短卡片按比例收窄；贴图降采样时同比缩小）。鼠标光斑的渐变半径默认 210/130px。继续调整光学形态时，可以查看 `glass.js` 的 `makeDisplacementMap`、`ensureFilter`，以及 `glass.css`。
+边缘作用带默认上限 44 个 CSS 像素（短卡片按比例收窄；贴图降采样时同比缩小）。鼠标光斑的渐变半径默认 210/130px。继续调整光学形态时，可以查看 `glass.js` 的 `makeDisplacementMap`、`ensureFilter`，以及 `glass.css`。
 
 ## 浏览器自检
 
@@ -125,7 +125,7 @@ await runParameterChecks(document.querySelector('#check-results'));
 
 ## 实现和开销
 
-轻量档 `light` 使用单次位移，强度取 `optics.refraction`，默认 96。它与 Full 共用弧面贴图，省去 RGB 分通道和颜色合成。切换档位会复用贴图。
+轻量档 `light` 使用单次位移，强度取 `optics.refraction`，默认 110。它与 Full 共用弧面贴图，省去 RGB 分通道和颜色合成。切换档位会复用贴图。
 
 Auto 对每个控制器最多分配 3 块 Full 面板，其与视口相交的面积总和不超过 40 万 CSS 像素。可见面积较大的面板优先，同面积按挂载顺序；其余可见面板使用 Light，视口外使用 Frost。滚动或视口尺寸停止变化 120ms 后会统一刷新。预算只计算视口相交面积，不检查遮挡、CSS 可见性和祖先容器裁剪，也不代表显卡能力或帧率承诺。手动 Full / Light 跳过该预算，仍保留兼容性回退和单面板 120 万像素上限。
 
@@ -133,7 +133,7 @@ Canvas 在初始化或尺寸变化时生成一张位移贴图。设距外缘向�
 
 一个控制器共用一个 ResizeObserver 和一个鼠标动画帧。贴图按尺寸、圆角和边缘带宽缓存，最多保留 8 张；重复刷新和切换模式可以复用。每张贴图约限 36 万像素，单卡片超过 120 万 CSS 像素会回退毛玻璃。`getState().opticalModel` 固定为 `lens`。
 
-运行 `node demo/benchmark.mjs` 可检查当前 Lens 贴图并测量 CPU 计算时间；它只包含像素数学和数组写入，不包含 PNG 编码、浏览器合成或 GPU 渲染。Full/Light 的背景模糊使用折射后的浏览器高斯模糊，默认 .6px；没有复现 native 的有限 25 点采样核，也不声明与 native 逐像素一致。普通列表可使用 `data-liquid-glass="frost"`。
+运行 `node demo/benchmark.mjs` 可检查当前 Lens 贴图并测量 CPU 计算时间；它只包含像素数学和数组写入，不包含 PNG 编码、浏览器合成或 GPU 渲染。Full/Light 的背景模糊使用折射后的浏览器高斯模糊，默认 3px；没有复现 native 的有限 25 点采样核，也不声明与 native 逐像素一致。普通列表可使用 `data-liquid-glass="frost"`。
 
 ## 兼容范围
 

@@ -46,8 +46,8 @@ export async function runIntegrationChecks(output) {
     context.drawImage(image, 0, 0);
     const pixels = context.getImageData(0, 0, 600, 600).data;
     const green = y => pixels[(y * 600 + 300) * 4 + 1];
-    check('降采样后 40 CSS px 处仍有弯曲', green(30) !== 128);
-    check('降采样后 70 CSS px 处已归零', green(52) === 128);
+    check('降采样后 30 CSS px 处仍有弯曲', green(22) !== 128);
+    check('降采样后 50 CSS px 处已归零', green(37) === 128);
     api.destroy();
 
     const nativeContext = HTMLCanvasElement.prototype.getContext;

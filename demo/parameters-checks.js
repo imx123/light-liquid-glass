@@ -70,7 +70,7 @@ export async function runParameterChecks(output) {
   };
   const green = (data, width, x, y) => data[(y * width + x) * 4 + 1];
   const defaultScales = values => values.length === 3 && values.every((value, i) =>
-    Math.abs(Number(value) - [95.83872, 96, 96.16128][i]) < 1e-8);
+    Math.abs(Number(value) - [109.8152, 110, 110.1848][i]) < 1e-8);
   const opticsRun = async (width, height, optics) => {
     closeActive();
     active = await mount(width, height, optics);
@@ -111,19 +111,19 @@ export async function runParameterChecks(output) {
     if (!supportsFull) {
       skip('optics 与位移贴图检查', '当前环境回退为 ' + base.mode + '，未执行 Full 路径');
     } else {
-      check('默认 Lens 强度 95.83872/96/96.16128', defaultScales(base.scales), base.scales.join(',') || '缺少滤镜');
+      check('默认 Lens 强度 109.8152/110/110.1848', defaultScales(base.scales), base.scales.join(',') || '缺少滤镜');
       if (!base.map) {
         skip('默认位移贴图', '贴图不可解码或不是 1:1');
       } else {
         const middle = Math.floor(base.width / 2);
-        check('默认 58px 边缘带在 40px 处生效', green(base.map, base.width, middle, 40) !== 128);
-        check('默认 58px 边缘带在 70px 处归零', green(base.map, base.width, middle, 70) === 128);
+        check('默认 44px 边缘带在 30px 处生效', green(base.map, base.width, middle, 30) !== 128);
+        check('默认 44px 边缘带在 50px 处归零', green(base.map, base.width, middle, 50) === 128);
         const center = (Math.floor(base.height / 2) * base.width + middle) * 4;
         check('贴图中心与 Alpha 保持中性', base.map[center] === 128 && base.map[center + 1] === 128
           && base.map[center + 2] === 128 && base.map[center + 3] === 255);
       }
 
-      const explicit = await opticsRun(300, 200, { refraction: 96, dispersion: 14, edgeWidth: 58 });
+      const explicit = await opticsRun(300, 200, { refraction: 110, dispersion: 14, edgeWidth: 44 });
       check('显式默认值强度一致', defaultScales(explicit.scales), explicit.scales.join(','));
       check('显式默认值复现默认贴图', !!explicit.map && !!base.map
         && explicit.map.length === base.map.length
