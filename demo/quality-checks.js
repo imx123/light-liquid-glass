@@ -82,11 +82,11 @@ export async function runQualityChecks(output) {
         const builds = api.getState().mapBuilds;
         api.setQuality('full');
         const fullFilter = filterFor(card), fullPrimitives = tagNames(fullFilter);
-        check('切到 full 重建三通道滤镜',
-          card.dataset.lgMode === 'full' && fullPrimitives.length === 9
+        check('切到 full 重建 Lens 三通道与基准混合滤镜',
+          card.dataset.lgMode === 'full' && fullPrimitives.length === 10
           && fullFilter?.querySelectorAll('feDisplacementMap').length === 3
           && fullFilter?.querySelectorAll('feColorMatrix').length === 3
-          && fullFilter?.querySelectorAll('feComposite').length === 2, fullPrimitives.join(','));
+          && fullFilter?.querySelectorAll('feComposite').length === 3, fullPrimitives.join(','));
         check('full 沿用同一张缓存位图', api.getState().mapBuilds === builds);
         api.setQuality('light');
         const rebuilt = filterFor(card), rebuiltPrimitives = tagNames(rebuilt);

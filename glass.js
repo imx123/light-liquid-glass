@@ -36,14 +36,7 @@ function normalizeOptics(input) {
   return optics;
 }
 
-function sdfRoundedRect(x, y, w, h, radius) {
-  const qx = Math.abs(x - w / 2) - (w / 2 - radius);
-  const qy = Math.abs(y - h / 2) - (h / 2 - radius);
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0))
-    + Math.min(Math.max(qx, qy), 0) - radius;
-}
-
-/** Compute a smooth inward sample displacement near the rounded-rectangle rim.
+/** Compute circular Lens displacement near the rounded-rectangle rim.
  * Inward sampling limits transparent boundary artifacts in tightly cropped filters.
  * RGB R/G encode horizontal/vertical displacement; sRGB color space is required.
  */
@@ -58,6 +51,8 @@ function makeDisplacementMap(w, h, radius, edgeWidth = 58, scale = 1) {
   // 边缘带按 CSS 像素定义；贴图降采样时同比缩小，视觉宽度保持一致。
   const cssScale = scale > 0 ? scale : 1;
   const band = Math.min(edgeWidth, Math.max(22, Math.min(w, h) / cssScale * .32)) * cssScale;
+  // 轮廓半径不变；光学法线使用 1.5 倍圆角半径，让折射集中在外缘。
+  const normalRadius = Math.min(radius * 1.5, w / 2, h / 2);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const px = x + .5, py = y + .5;
@@ -71,19 +66,21 @@ function makeDisplacementMap(w, h, radius, edgeWidth = 58, scale = 1) {
         p[i] = p[i + 1] = p[i + 2] = 128; p[i + 3] = 255;
         continue;
       }
-      const sx = px < w / 2 ? -1 : 1, sy = py < h / 2 ? -1 : 1;
-      let nx = length ? ox / length * sx : (qx >= qy ? sx : 0);
-      let ny = length ? oy / length * sy : (qx < qy ? sy : 0);
-      // 极窄的法线接缝沿用原差分，避免解析分段在中轴形成方向跳变。
-      if ((Math.abs(qx - qy) < 2 && qx < 1 && qy < 1) || Math.abs(qx) < 1 || Math.abs(qy) < 1) {
-        const gx = sdfRoundedRect(px+1,py,w,h,radius)-sdfRoundedRect(px-1,py,w,h,radius);
-        const gy = sdfRoundedRect(px,py+1,w,h,radius)-sdfRoundedRect(px,py-1,w,h,radius);
-        const inv = 1 / Math.max(1e-5, Math.hypot(gx, gy));
-        nx = gx * inv; ny = gy * inv;
+      const nqx = Math.abs(px - w / 2) - (w / 2 - normalRadius);
+      const nqy = Math.abs(py - h / 2) - (h / 2 - normalRadius);
+      let nx, ny;
+      if (nqx >= 0 || nqy >= 0) {
+        const a = Math.max(nqx, .0001), b = Math.max(nqy, .0001);
+        const inv = 1 / Math.hypot(a, b);
+        nx = Math.sign(px - w / 2) * a * inv;
+        ny = Math.sign(py - h / 2) * b * inv;
+      } else {
+        nx = Math.sign(px - w / 2) * (nqx >= nqy ? 1 : 0);
+        ny = Math.sign(py - h / 2) * (nqx < nqy ? 1 : 0);
       }
       const t = Math.max(0, Math.min(1, -d/band));
-      // 弧面近似：外缘较陡，向中心连续归零，拉出可见的透镜弯曲。
-      const strength = Math.pow(1 - t * t, 1.5);
+      // 圆形 Lens 曲线：作用带中段迅速收敛，中心保持中性。
+      const strength = 1 - Math.sqrt(Math.max(0, 1 - (1 - t) * (1 - t)));
       // 位移量以贴图像素编码，最终采样距离再由 SVG 通道缩放（optics）决定。
       p[i] = Math.max(0,Math.min(255,Math.round(128 - nx*104*strength)));
       p[i + 1] = Math.max(0,Math.min(255,Math.round(128 - ny*104*strength)));
@@ -186,14 +183,19 @@ export function createLiquidGlass(options = {}) {
       filter.append(svgNode('feDisplacementMap', { in: 'SourceGraphic', in2: 'map', scale: optics.refraction,
         xChannelSelector: 'R', yChannelSelector: 'G' }));
     } else {
+      // dispersion 保留 0..50 的接口范围，归一化为 D=0..1。
+      const dispersion = optics.dispersion / 50;
       for (let channel = 0; channel < 3; channel++) {
         const matrix = Array(20).fill(0); matrix[channel * 6] = 1; matrix[18] = 1;
-        filter.append(svgNode('feDisplacementMap', { in: 'SourceGraphic', in2: 'map', scale: Math.max(0, optics.refraction + (channel - 1) * optics.dispersion),
+        filter.append(svgNode('feDisplacementMap', { in: 'SourceGraphic', in2: 'map', scale: optics.refraction * (1 + (channel - 1) * dispersion * .006),
           xChannelSelector: 'R', yChannelSelector: 'G', result: 'shift' + channel }));
         filter.append(svgNode('feColorMatrix', { in: 'shift' + channel, type: 'matrix', values: matrix.join(' '), result: 'c' + channel }));
       }
       filter.append(svgNode('feComposite', { in: 'c0', in2: 'c1', operator: 'arithmetic', k2: 1, k3: 1, result: 'rg' }));
-      filter.append(svgNode('feComposite', { in: 'rg', in2: 'c2', operator: 'arithmetic', k2: 1, k3: 1 }));
+      filter.append(svgNode('feComposite', { in: 'rg', in2: 'c2', operator: 'arithmetic', k2: 1, k3: 1, result: 'rgb' }));
+      const mix = dispersion > .001 ? dispersion * .20 : 0;
+      filter.append(svgNode('feComposite', { in: 'shift1', in2: 'rgb', operator: 'arithmetic',
+        k2: 1 - mix, k3: mix }));
     }
     defs.append(filter); Object.assign(record, { filter, map, id, variant });
   }
@@ -264,7 +266,7 @@ export function createLiquidGlass(options = {}) {
   function getState() {
     const counts = { full: 0, light: 0, frost: 0, solid: 0 };
     for (const { el } of records.values()) if (counts[el.dataset.lgMode] !== undefined) counts[el.dataset.lgMode]++;
-    return { quality, ...counts, elements: records.size, filters: defs?.childElementCount || 0,
+    return { quality, opticalModel: 'lens', ...counts, elements: records.size, filters: defs?.childElementCount || 0,
       mapBuilds, cachedMaps: cache.size, disposed };
   }
   function refresh() {

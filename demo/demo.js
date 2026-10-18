@@ -39,8 +39,9 @@ $('checks').addEventListener('click', async () => {
     const { runParameterChecks } = await import('./parameters-checks.js');
     const { runQualityChecks } = await import('./quality-checks.js');
     const { runIntegrationChecks } = await import('./integration-checks.js');
+    const { runLensChecks } = await import('./lens-checks.js');
     for (const [name, run] of [['基础检查', runChecks], ['异常清理', runLifecycleChecks],
-      ['效果参数', runParameterChecks], ['轻量档与 Auto', runQualityChecks], ['集成检查', runIntegrationChecks]]) {
+      ['效果参数', runParameterChecks], ['轻量档与 Auto', runQualityChecks], ['集成检查', runIntegrationChecks], ['Lens 光学', runLensChecks]]) {
       output.textContent = '正在运行：' + name;
       const result = await run(output);
       passed += result.passed; failed += result.failed; skipped += result.skipped || 0;

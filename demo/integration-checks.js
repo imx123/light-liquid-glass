@@ -28,7 +28,8 @@ export async function runIntegrationChecks(output) {
     const href = filterFor(card).querySelector('feImage').getAttribute('href');
     const builds = api.getState().mapBuilds;
     api.setQuality('full');
-    check('切换 full 保留折射和色散参数', scales() === '125,145,165');
+    check('切换 full 保留 Lens 折射和色散参数', scales().split(',').length === 3 && scales().split(',').every((value, i) =>
+      Math.abs(Number(value) - [144.652, 145, 145.348][i]) < 1e-8));
     check('跨档切换共享自定义边缘贴图', api.getState().mapBuilds === builds
       && filterFor(card).querySelector('feImage').getAttribute('href') === href);
     api.setQuality('light');

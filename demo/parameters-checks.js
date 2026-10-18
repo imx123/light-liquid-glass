@@ -69,6 +69,8 @@ export async function runParameterChecks(output) {
     return ctx.getImageData(0, 0, width, height).data;
   };
   const green = (data, width, x, y) => data[(y * width + x) * 4 + 1];
+  const defaultScales = values => values.length === 3 && values.every((value, i) =>
+    Math.abs(Number(value) - [95.83872, 96, 96.16128][i]) < 1e-8);
   const opticsRun = async (width, height, optics) => {
     closeActive();
     active = await mount(width, height, optics);
@@ -109,7 +111,7 @@ export async function runParameterChecks(output) {
     if (!supportsFull) {
       skip('optics 与位移贴图检查', '当前环境回退为 ' + base.mode + '，未执行 Full 路径');
     } else {
-      check('默认光学强度 82/96/110', base.scales.join(',') === '82,96,110', base.scales.join(',') || '缺少滤镜');
+      check('默认 Lens 强度 95.83872/96/96.16128', defaultScales(base.scales), base.scales.join(',') || '缺少滤镜');
       if (!base.map) {
         skip('默认位移贴图', '贴图不可解码或不是 1:1');
       } else {
@@ -122,7 +124,7 @@ export async function runParameterChecks(output) {
       }
 
       const explicit = await opticsRun(300, 200, { refraction: 96, dispersion: 14, edgeWidth: 58 });
-      check('显式默认值强度一致', explicit.scales.join(',') === '82,96,110', explicit.scales.join(','));
+      check('显式默认值强度一致', defaultScales(explicit.scales), explicit.scales.join(','));
       check('显式默认值复现默认贴图', !!explicit.map && !!base.map
         && explicit.map.length === base.map.length
         && explicit.map.every((value, index) => value === base.map[index]));
@@ -147,7 +149,7 @@ export async function runParameterChecks(output) {
       if (!wide.map) skip('edgeWidth 上限', '贴图不可解码或不是 1:1');
       else {
         const middle = Math.floor(wide.width / 2);
-        check('edgeWidth 999 被钳制为 120px', green(wide.map, wide.width, middle, 110) !== 128
+        check('edgeWidth 999 被钳制为 120px', green(wide.map, wide.width, middle, 100) !== 128
           && green(wide.map, wide.width, middle, 150) === 128);
       }
 
@@ -155,8 +157,9 @@ export async function runParameterChecks(output) {
       check('refraction 下限钳制为 0', noRefraction.scales.join(',') === '0,0,0', noRefraction.scales.join(','));
       const maxRefraction = await opticsRun(300, 200, { refraction: 999, dispersion: 0 });
       check('refraction 上限钳制为 200', maxRefraction.scales.join(',') === '200,200,200', maxRefraction.scales.join(','));
-      const maxDispersion = await opticsRun(300, 200, { refraction: 0, dispersion: 999 });
-      check('dispersion 上限钳制为 50', maxDispersion.scales.join(',') === '0,0,50', maxDispersion.scales.join(','));
+      const maxDispersion = await opticsRun(300, 200, { refraction: 100, dispersion: 999 });
+      check('dispersion 上限钳制为 50', maxDispersion.scales.length === 3 && maxDispersion.scales.every((value, i) =>
+        Math.abs(Number(value) - [99.4, 100, 100.6][i]) < 1e-8), maxDispersion.scales.join(','));
     }
 
     // 3. 光斑 CSS 变量（纯 CSS 层，不依赖 Full 路径）。
