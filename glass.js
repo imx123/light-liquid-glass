@@ -48,35 +48,50 @@ function makeDisplacementMap(w, h, radius, edgeWidth = 44, scale = 1) {
   if (!ctx) throw new Error('Canvas2D is unavailable');
   const img = ctx.createImageData(w, h);
   const p = img.data;
+  // 一次填好中性 RGBA。按本机字节序构造像素，不依赖大小端。
+  const neutral = new Uint32Array(new Uint8Array([128, 128, 128, 255]).buffer)[0];
+  new Uint32Array(p.buffer, p.byteOffset, w * h).fill(neutral);
   // 边缘带按 CSS 像素定义；贴图降采样时同比缩小，视觉宽度保持一致。
   const cssScale = scale > 0 ? scale : 1;
   const band = Math.min(edgeWidth, Math.max(22, Math.min(w, h) / cssScale * .32)) * cssScale;
   // 轮廓半径不变；光学法线使用 1.5 倍圆角半径，让折射集中在外缘。
   const normalRadius = Math.min(radius * 1.5, w / 2, h / 2);
+  const inset = Math.max(radius, band);
+  const skipStart = Math.max(0, Math.ceil(inset - .5));
+  const skipEnd = Math.min(w, Math.floor(w - inset - .5) + 1);
+  const horizontal = new Float64Array(w), normalX = new Float64Array(w);
+  const signs = new Int8Array(w);
+  for (let x = 0; x < w; x++) {
+    const dx = x + .5 - w / 2;
+    horizontal[x] = Math.abs(dx) - (w / 2 - radius);
+    normalX[x] = Math.abs(dx) - (w / 2 - normalRadius);
+    signs[x] = Math.sign(dx);
+  }
   for (let y = 0; y < h; y++) {
+    const py = y + .5;
+    const qy = Math.abs(py - h / 2) - (h / 2 - radius);
+    const nqy = Math.abs(py - h / 2) - (h / 2 - normalRadius);
+    const signY = Math.sign(py - h / 2);
+    const skipCenter = py >= inset && py <= h - inset && skipEnd > skipStart;
     for (let x = 0; x < w; x++) {
-      const px = x + .5, py = y + .5;
-      const qx = Math.abs(px - w / 2) - (w / 2 - radius);
-      const qy = Math.abs(py - h / 2) - (h / 2 - radius);
+      // 中央矩形必在光学带外，直接跳过；圆角和边缘仍使用原公式。
+      if (skipCenter && x === skipStart) { x = skipEnd - 1; continue; }
+      const qx = horizontal[x];
       const ox = Math.max(qx, 0), oy = Math.max(qy, 0);
       const length = Math.hypot(ox, oy);
       const d = length + Math.min(Math.max(qx, qy), 0) - radius;
       const i = (y*w + x)*4;
-      if (d > 0 || d < -band) {
-        p[i] = p[i + 1] = p[i + 2] = 128; p[i + 3] = 255;
-        continue;
-      }
-      const nqx = Math.abs(px - w / 2) - (w / 2 - normalRadius);
-      const nqy = Math.abs(py - h / 2) - (h / 2 - normalRadius);
+      if (d > 0 || d < -band) continue;
+      const nqx = normalX[x];
       let nx, ny;
       if (nqx >= 0 || nqy >= 0) {
         const a = Math.max(nqx, .0001), b = Math.max(nqy, .0001);
         const inv = 1 / Math.hypot(a, b);
-        nx = Math.sign(px - w / 2) * a * inv;
-        ny = Math.sign(py - h / 2) * b * inv;
+        nx = signs[x] * a * inv;
+        ny = signY * b * inv;
       } else {
-        nx = Math.sign(px - w / 2) * (nqx >= nqy ? 1 : 0);
-        ny = Math.sign(py - h / 2) * (nqx < nqy ? 1 : 0);
+        nx = signs[x] * (nqx >= nqy ? 1 : 0);
+        ny = signY * (nqx < nqy ? 1 : 0);
       }
       const t = Math.max(0, Math.min(1, -d/band));
       // 圆形 Lens 曲线：作用带中段迅速收敛，中心保持中性。
@@ -109,7 +124,8 @@ export function createLiquidGlass(options = {}) {
   const chromium = /Chrome\/|Chromium\/|Edg\//.test(navigator.userAgent)
     && !/Firefox|FxiOS|CriOS|EdgiOS|iPhone|iPad|Android/.test(navigator.userAgent)
     && CSS.supports('backdrop-filter', 'url("#lg-probe")');
-  let svg, defs, timer, frame = 0, pending = null, active = null, disposed = false, mapBuilds = 0;
+  let svg, defs, timer, frame = 0, viewportFrame = 0, moving = false;
+  let pending = null, active = null, disposed = false, mapBuilds = 0;
   const listen = (target, event, fn, signal = abort.signal) =>
     target.addEventListener(event, fn, { passive: true, signal });
   const observer = new ResizeObserver(scheduleRefresh);
@@ -141,7 +157,8 @@ export function createLiquidGlass(options = {}) {
     });
   }
   function dropFilter(record) {
-    record.filter?.remove();
+    if (!record.filter) return;
+    record.filter.remove();
     record.filter = null; record.signature = ''; record.variant = '';
     for (const key of ['backdrop-filter', '-webkit-backdrop-filter']) {
       const old = record.styles.get(key);
@@ -208,15 +225,25 @@ export function createLiquidGlass(options = {}) {
     return { rect, area: width > 0 && height > 0 ? width * height : 0 };
   }
   function planModes() {
-    const plan = new Map(), candidates = [];
+    const plan = new Map(), candidates = [], geometry = new Map();
     let order = 0;
     for (const record of records.values()) {
       const el = record.el;
       if (transparency.matches || quality === 'solid') { plan.set(record, 'solid'); continue; }
       if (quality === 'frost' || el.dataset.liquidGlass === 'frost') { plan.set(record, 'frost'); continue; }
       const metrics = measure(record);
+      if (metrics) {
+        // 在任何材质写入前批量读尺寸与圆角，避免逐面板读写交错。
+        try {
+          const w = Math.round(metrics.rect.width), h = Math.round(metrics.rect.height);
+          const raw = getComputedStyle(el).borderTopLeftRadius;
+          const radius = Math.min(w / 2, h / 2, (parseFloat(raw) || 0) * (raw.endsWith('%') ? Math.min(w, h) / 100 : 1));
+          geometry.set(record, { w, h, radius });
+        } catch (error) { geometry.set(record, { error }); }
+      }
       if (quality === 'full' || quality === 'light') { plan.set(record, metrics ? quality : 'frost'); continue; }
       if (!metrics || !metrics.area) { plan.set(record, 'frost'); continue; }
+      if (moving) { plan.set(record, 'light'); continue; }
       candidates.push({ record, area: metrics.area, order: order++ });
     }
     // Auto 预算按裁剪后的可视面积从大到小分配，同面积保持 DOM 顺序。
@@ -227,17 +254,16 @@ export function createLiquidGlass(options = {}) {
         plan.set(record, 'full'); fullPanels++; fullArea += area;
       } else plan.set(record, 'light');
     }
-    return plan;
+    return { plan, geometry };
   }
-  function apply(record, mode) {
+  function apply(record, mode, geometry) {
     const el = record.el;
-    el.dataset.lgMode = mode;
+    if (el.dataset.lgMode !== mode) el.dataset.lgMode = mode;
     if (mode !== 'full' && mode !== 'light') { dropFilter(record); return; }
     try {
-      const rect = el.getBoundingClientRect();
-      const w = Math.round(rect.width), h = Math.round(rect.height);
-      const raw = getComputedStyle(el).borderTopLeftRadius;
-      const radius = Math.min(w / 2, h / 2, (parseFloat(raw) || 0) * (raw.endsWith('%') ? Math.min(w, h) / 100 : 1));
+      if (geometry.error) throw geometry.error;
+      const { w, h, radius } = geometry;
+      record.geometry = geometry;
       const signature = [w, h, radius, optics.edgeWidth].join(':');
       if (record.filter && record.variant === mode && record.signature === signature) return;
       if (!record.filter || record.variant !== mode) {
@@ -245,6 +271,8 @@ export function createLiquidGlass(options = {}) {
         ensureFilter(record, mode);
       }
       let bitmap = cache.get(signature);
+      // 命中的常用几何移到末尾，避免短暂尺寸变更挤掉热点贴图。
+      if (bitmap) { cache.delete(signature); cache.set(signature, bitmap); }
       if (!bitmap) {
         const ratio = Math.min(1, Math.sqrt(360000 / (w * h)));
         bitmap = makeDisplacementMap(Math.max(1, Math.round(w * ratio)), Math.max(1, Math.round(h * ratio)),
@@ -269,21 +297,49 @@ export function createLiquidGlass(options = {}) {
     return { quality, opticalModel: 'lens', ...counts, elements: records.size, filters: defs?.childElementCount || 0,
       mapBuilds, cachedMaps: cache.size, disposed };
   }
+  function render() {
+    const { plan, geometry } = planModes();
+    for (const record of records.values()) apply(record, plan.get(record) || 'frost', geometry.get(record));
+    onChange(getState());
+  }
   function refresh() {
     if (disposed) return;
     clearTimeout(timer); timer = 0;
+    moving = false; cancelAnimationFrame(viewportFrame); viewportFrame = 0;
     const elements = new Set(root.querySelectorAll('[data-liquid-glass]'));
     if (root.matches?.('[data-liquid-glass]')) elements.add(root);
     for (const [el, record] of records) if (!elements.has(el) || !el.isConnected) unmount(record);
     for (const el of elements) if (el.isConnected && !records.has(el)) mount(el);
-    const plan = planModes();
-    for (const record of records.values()) apply(record, plan.get(record) || 'frost');
-    onChange(getState());
+    render();
   }
   function scheduleRefresh() {
     if (disposed) return;
     clearTimeout(timer);
-    timer = setTimeout(refresh, VIEWPORT_REFRESH_MS);
+    // 自动几何刷新只处理已挂载记录。新增/移除仍由公开 refresh() 显式同步。
+    timer = setTimeout(() => {
+      timer = 0;
+      if (disposed) return;
+      moving = false; cancelAnimationFrame(viewportFrame); viewportFrame = 0;
+      for (const record of records.values()) if (!record.el.isConnected) unmount(record);
+      render();
+    }, VIEWPORT_REFRESH_MS);
+  }
+  function viewportChange() {
+    if (disposed) return;
+    if (quality === 'auto' && !moving) {
+      moving = true;
+      // 操作期间用基准折射；只换滤镜，沿用旧几何与位图，不在滚动帧重算 PNG。
+      viewportFrame = requestAnimationFrame(() => {
+        viewportFrame = 0;
+        if (disposed || !moving || quality !== 'auto') return;
+        let changed = false;
+        for (const record of records.values()) if (record.el.dataset.lgMode === 'full') {
+          apply(record, 'light', record.geometry); changed = true;
+        }
+        if (changed) onChange(getState());
+      });
+    }
+    scheduleRefresh();
   }
   function setQuality(value) {
     if (!MODES.includes(value)) throw new TypeError('Unknown glass quality: ' + value);
@@ -292,6 +348,7 @@ export function createLiquidGlass(options = {}) {
   function destroy() {
     if (disposed) return;
     disposed = true; abort.abort(); observer.disconnect(); clearTimeout(timer); hide();
+    cancelAnimationFrame(viewportFrame); viewportFrame = 0;
     for (const record of [...records.values()]) unmount(record);
     svg?.remove(); cache.clear();
   }
@@ -302,8 +359,9 @@ export function createLiquidGlass(options = {}) {
     listen(motion, 'change', () => { if (motion.matches) hide(); });
     listen(transparency, 'change', refresh); listen(coarse, 'change', refresh);
     // 捕获内部滚动容器的 scroll；与尺寸观察共用一个防抖定时器。
-    document.addEventListener('scroll', scheduleRefresh, { passive: true, capture: true, signal: abort.signal });
-    listen(window, 'resize', scheduleRefresh);
+    document.addEventListener('scroll', () => { if (quality === 'auto') viewportChange(); },
+      { passive: true, capture: true, signal: abort.signal });
+    listen(window, 'resize', viewportChange);
     refresh();
   } catch (error) {
     destroy();

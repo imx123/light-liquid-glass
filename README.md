@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-Test environment: 2026-10-18, Windows, Node.js v26.10.0, Codex desktop Chromium. The Lens version passed 106/106 browser checks with 0 skipped, covering Full and Light. Other browsers and GPU frame rates remain unverified. See [VALIDATION.md](demo/VALIDATION.md).
+Test environment: 2026-10-21, Windows, Node.js v26.10.0, Codex desktop Chromium. The performance update passed 116/116 browser checks with 0 skipped, 23 host scheduling checks and 75 byte-exact Lens map comparisons. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
@@ -71,11 +71,11 @@ The module reports PASS/FAIL/SKIP lines for optics validation, clamping, map edg
 
 Light uses one displacement pass at `optics.refraction` (default 110), sharing the same curved-edge bitmap with Full. Full uses three passes for RGB dispersion. Switching modes reuses the bitmap.
 
-Auto assigns Full to at most 3 panels per controller, within a combined viewport-clipped area of 400,000 CSS pixels. Larger visible areas take priority; ties keep mount order. Other visible panels use Light, while offscreen panels use Frost. Scrolling and viewport resizing schedule a shared refresh after 120ms without further events. The budget measures viewport intersection, without checking occlusion, CSS visibility or ancestor clipping. It is a layout heuristic and makes no frame-rate promise. Manual Full and Light bypass this budget while keeping the compatibility and 1,200,000-pixel safety limit.
+Auto assigns Full to at most 3 panels per controller, within a combined viewport-clipped area of 400,000 CSS pixels. Larger visible areas take priority; ties keep mount order. Other visible panels use Light, while offscreen panels use Frost. During scrolling or window resizing, existing Full panels temporarily use Light without measuring layout or generating maps in the transition. After 120ms without further events, Auto remeasures and restores its Full budget. Manual Full keeps full dispersion during interaction. The budget measures viewport intersection, without checking occlusion, CSS visibility or ancestor clipping; it makes no frame-rate promise.
 
 Canvas generates a displacement map when geometry changes. With normalized inward distance `t = clamp(-d / band, 0, 1)`, Lens strength is `1 - sqrt(1 - (1 - t)^2)`. Optical normals use 1.5 times the corner radius, capped at half the shorter side. Full combines RGB and blends it into the baseline sample; Light uses a single baseline displacement. The text and controls stay outside the backdrop filter. Pointer movement only updates CSS coordinates.
 
-A controller shares one ResizeObserver and one pointer animation frame. It caches up to eight maps by size, radius and edge width, so repeated refreshes and mode changes can reuse them. Map generation is capped at approximately 360,000 pixels; panels larger than 1,200,000 CSS pixels fall back to frost. `getState().opticalModel` is always `lens`.
+A controller shares one ResizeObserver and one pointer animation frame. Geometry and style reads are batched before material writes. Unchanged refreshes avoid redundant writes; automatic geometry updates do not rescan element membership. Call `refresh()` explicitly after mounting or removing panels. An eight-map LRU cache retains recently used sizes. Map generation skips the neutral center while preserving Lens pixels; it remains capped at approximately 360,000 pixels, with panels over 1,200,000 CSS pixels falling back to frost. `getState().opticalModel` is always `lens`.
 
 Run `node demo/benchmark.mjs` to check the current Lens map and measure CPU pixel math and array writes. PNG encoding, compositing and GPU sampling are excluded. Full and Light apply browser Gaussian blur after refraction, at 3px by default. This does not reproduce the native finite 25-tap blur kernel or claim pixel equality with native rendering. Ordinary lists can use `data-liquid-glass="frost"`.
 
@@ -91,7 +91,7 @@ A strict CSP must allow the local modules, generated `data:` images and required
 
 Demo files, checks and the validation record are under `demo/`.
 
-`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. The six check modules cover controller behavior, exceptions, parameters, quality, integration and Lens optics. Click “运行全部自检” to run all 106 checks. `benchmark.mjs` checks current Lens map math and CPU time. `manifest.sha256` lists file hashes. The preview lives in `preview.png`.
+`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the 116 browser checks, including 10 adaptive-interaction checks. `node demo/refresh-checks.mjs` runs 23 host scheduler checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates this performance update.
 
 Code and documentation were written with AI assistance. The demo background is AI generated.
 

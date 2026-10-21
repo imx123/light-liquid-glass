@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 const types = { html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', js: 'text/javascript; charset=utf-8',
   md: 'text/plain; charset=utf-8', png: 'image/png' };
-const names = ['index.html', 'glass.css', 'glass.js', 'demo.css', 'demo.js', 'checks.js', 'lifecycle-checks.js', 'parameters-checks.js', 'quality-checks.js', 'integration-checks.js', 'lens-checks.js', 'background.png', 'README.md', 'README.zh-CN.md', 'VALIDATION.md'];
+const names = ['index.html', 'glass.css', 'glass.js', 'demo.css', 'demo.js', 'checks.js', 'lifecycle-checks.js', 'parameters-checks.js', 'quality-checks.js', 'integration-checks.js', 'lens-checks.js', 'performance-checks.js', 'background.png', 'README.md', 'README.zh-CN.md', 'VALIDATION.md'];
 const files = new Map(names.map(name => ['/' + name, name])); files.set('/', 'index.html');
 files.set('/glass.js', '../glass.js');
 files.set('/glass.css', '../glass.css');
