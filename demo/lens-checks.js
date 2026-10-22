@@ -28,9 +28,9 @@ export async function runLensChecks(output) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true }); ctx.drawImage(image, 0, 0);
     const pixels = ctx.getImageData(0, 0, 320, 220).data;
     const green = y => pixels[(y * 320 + 160) * 4 + 1];
-    // 像素中心距边缘 .5px / 29.5px，带宽 44px，固定样本防止退回宽弧面。
-    check('Lens 外缘采样符合圆形曲线', green(0) === 216);
-    check('Lens 中段采样迅速收敛', green(29) === 134);
+    // 像素中心距边缘 .5px / 10.5px，带宽 15px，固定样本验证默认弧面。
+    check('Lens 外缘采样符合圆形曲线', green(0) === 205);
+    check('Lens 中段采样迅速收敛', green(10) === 133);
     const scales = () => [...filterOf(card).querySelectorAll('feDisplacementMap')].map(n => Number(n.getAttribute('scale')));
     const blend = () => filterOf(card).lastElementChild;
     const full = scales();

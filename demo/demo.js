@@ -7,7 +7,7 @@ let saved = 'auto';
 try { const value = localStorage.getItem(storageKey); if (['auto', 'full', 'light', 'frost', 'solid'].includes(value)) saved = value; } catch {}
 $('quality').value = saved;
 const root = document.querySelector('main');
-const defaults = { refraction: 110, dispersion: 14, edgeWidth: 44, blur: 3 };
+const defaults = { refraction: 110, dispersion: 14, edgeWidth: 15, blur: 2 };
 let glass, applied;
 function reportState(state) {
   document.documentElement.dataset.demoQuality = state.quality;

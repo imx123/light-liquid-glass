@@ -20,7 +20,7 @@ Designed for websites。核心文件和中英文 README 放在根目录，演示
 node demo/server.mjs
 ```
 
-打开 <http://localhost:4178>。顶栏可以切换自动、液态折射、轻量折射、毛玻璃和纯色。参数面板提供折射幅度（0–200）、色散（0–50）、边缘带宽（1–120px）和液态背景模糊（0–12px，步长 0.1）滑块：拖动时显示数值，松开后应用，也支持方向键微调。“恢复默认参数”回到 110 / 14 / 44px / 3px。调节保留输入内容、动态卡片和当前效果档位；刷新页面后参数回到默认值。下方可以添加、移除卡片，或运行全部自检。演示服务器默认只监听本机。手机测试时，让手机与电脑处于可互通的局域网；在 PowerShell 设置 `$env:HOST="电脑的局域网 IPv4"; $env:PORT="4179"; node demo/server.mjs`，再在手机打开 `http://电脑的局域网IPv4:4179/`。只提供演示白名单文件，不浏览项目目录。
+打开 <http://localhost:4178>。顶栏可以切换自动、液态折射、轻量折射、毛玻璃和纯色。参数面板提供折射幅度（0–200）、色散（0–50）、边缘带宽（1–120px）和液态背景模糊（0–12px，步长 0.1）滑块：拖动时显示数值，松开后应用，也支持方向键微调。“恢复默认参数”回到 110 / 14 / 15px / 2px。调节保留输入内容、动态卡片和当前效果档位；刷新页面后参数回到默认值。下方可以添加、移除卡片，或运行全部自检。演示服务器默认只监听本机。手机测试时，让手机与电脑处于可互通的局域网；在 PowerShell 设置 `$env:HOST="电脑的局域网 IPv4"; $env:PORT="4179"; node demo/server.mjs`，再在手机打开 `http://电脑的局域网IPv4:4179/`。只提供演示白名单文件，不浏览项目目录。
 
 ## 放进现有页面
 
@@ -68,7 +68,7 @@ const glass = createLiquidGlass({
   optics: {                     // 光学形态，可省略；下面是默认值
     refraction: 110,             // 0..200
     dispersion: 14,             // 0..50
-    edgeWidth: 44               // 1..120，CSS 像素
+    edgeWidth: 15               // 1..120，CSS 像素
   },
   onChange(state) {
     console.log(state.quality, state.full, state.light, state.frost, state.solid);
@@ -83,7 +83,7 @@ glass.destroy();                 // 释放监听器、观察器、RAF、定时�
 
 `setQuality('full')` 或 `setQuality('light')` 会申请对应折射效果；环境不兼容时仍然回退。想让个别卡片一直使用毛玻璃，可以写 `data-liquid-glass="frost"`。
 
-`optics` 调整光学形态：`refraction` 默认 110（0 到 200），`dispersion` 默认 14（0 到 50），`edgeWidth` 默认 44（1 到 120）。字段只接受有限数字；字符串、`NaN`、`Infinity` 等会在创建控制器资源之前抛出 `TypeError`，有限值超出范围时限制到边界。大卡片的贴图降采样时，边缘带也同比缩小，保持 CSS 像素范围。要更换参数，先销毁旧控制器，再创建新控制器。
+`optics` 调整光学形态：`refraction` 默认 110（0 到 200），`dispersion` 默认 14（0 到 50），`edgeWidth` 默认 15（1 到 120）。字段只接受有限数字；字符串、`NaN`、`Infinity` 等会在创建控制器资源之前抛出 `TypeError`，有限值超出范围时限制到边界。大卡片的贴图降采样时，边缘带也同比缩小，保持 CSS 像素范围。要更换参数，先销毁旧控制器，再创建新控制器。
 
 正式版统一使用 Lens，旧宽弧面模型已移除。`D = dispersion / 50`，通道序号为 0、1、2 时，位移强度是 `refraction * (1 + (通道序号 - 1) * D * 0.006)`，默认约为 109.8152/110/110.1848。RGB 合成结果只按 `0.20 * D` 混入绿色通道的基准画面（D ≤ 0.001 时不混入），默认混合量为 5.6%。原有参数名和范围保留，色散数值的视觉含义已改变。
 
@@ -100,7 +100,7 @@ glass.destroy();                 // 释放监听器、观察器、RAF、定时�
 ```css
 .my-panel {
   --lg-radius: 28px;
-  --lg-center-blur: 3px;    /* 液态模式中心轻模糊 */
+  --lg-center-blur: 2px;    /* 液态模式中心轻模糊 */
   --lg-frost-blur: 6px;      /* 毛玻璃模式模糊 */
   --lg-solid: #1b253b;
   --lg-tint: linear-gradient(135deg, #c2ceff1e, #23315388 65%, #bbc6ff10);
@@ -110,7 +110,7 @@ glass.destroy();                 // 释放监听器、观察器、RAF、定时�
 }
 ```
 
-边缘作用带默认上限 44 个 CSS 像素（短卡片按比例收窄；贴图降采样时同比缩小）。鼠标光斑的渐变半径默认 210/130px。继续调整光学形态时，可以查看 `glass.js` 的 `makeDisplacementMap`、`ensureFilter`，以及 `glass.css`。
+边缘作用带默认上限 15 个 CSS 像素（短卡片按比例收窄；贴图降采样时同比缩小）。鼠标光斑的渐变半径默认 210/130px。继续调整光学形态时，可以查看 `glass.js` 的 `makeDisplacementMap`、`ensureFilter`，以及 `glass.css`。
 
 ## 浏览器自检
 
@@ -135,7 +135,7 @@ Canvas 在初始化或尺寸变化时生成一张位移贴图。设距外缘向�
 
 `node demo/refresh-checks.mjs` 运行 50 项 host 调度与兼容分支检查，`node demo/performance.mjs` 对比优化前后 75 组贴图并交替采样 CPU 耗时。它们不替代浏览器或 GPU 验证。演示页“运行全部自检”包含 9 项连续滚动进入与离屏释放检查；安卓 Auto 使用 Light，手动 Full 运行三通道光学检查；未实际运行的检查不算已验收。
 
-运行 `node demo/benchmark.mjs` 可检查当前 Lens 贴图并测量 CPU 计算时间；它只包含像素数学和数组写入，不包含 PNG 编码、浏览器合成或 GPU 渲染。Full/Light 的背景模糊使用折射后的浏览器高斯模糊，默认 3px；没有复现 native 的有限 25 点采样核，也不声明与 native 逐像素一致。普通列表可使用 `data-liquid-glass="frost"`。
+运行 `node demo/benchmark.mjs` 可检查当前 Lens 贴图并测量 CPU 计算时间；它只包含像素数学和数组写入，不包含 PNG 编码、浏览器合成或 GPU 渲染。Full/Light 的背景模糊使用折射后的浏览器高斯模糊，默认 2px；没有复现 native 的有限 25 点采样核，也不声明与 native 逐像素一致。普通列表可使用 `data-liquid-glass="frost"`。
 
 ## 兼容范围
 

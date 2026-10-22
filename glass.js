@@ -8,7 +8,7 @@ const VIEWPORT_REFRESH_MS = 120;
 const OPTICS = {
   refraction: {fallback: 110, min: 0, max: 200},
   dispersion: {fallback: 14, min: 0, max: 50},
-  edgeWidth: {fallback: 44, min: 1, max: 120},
+  edgeWidth: {fallback: 15, min: 1, max: 120},
 };
 const owners = new WeakMap();
 let uid = 0;
@@ -40,7 +40,7 @@ function normalizeOptics(input) {
  * Inward sampling limits transparent boundary artifacts in tightly cropped filters.
  * RGB R/G encode horizontal/vertical displacement; sRGB color space is required.
  */
-function makeDisplacementMap(w, h, radius, edgeWidth = 44, scale = 1) {
+function makeDisplacementMap(w, h, radius, edgeWidth = 15, scale = 1) {
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
@@ -301,7 +301,7 @@ export function createLiquidGlass(options = {}) {
       record.map.setAttribute('width', w); record.map.setAttribute('height', h);
       record.signature = signature;
       // 中央清晰，只有贴图边缘参与折射；文字不经过滤镜。
-      el.style.setProperty('backdrop-filter', 'url("#' + record.id + '") blur(var(--lg-center-blur, 3px)) saturate(120%)');
+      el.style.setProperty('backdrop-filter', 'url("#' + record.id + '") blur(var(--lg-center-blur, 2px)) saturate(120%)');
       el.style.setProperty('-webkit-backdrop-filter', el.style.getPropertyValue('backdrop-filter'));
     } catch (error) {
       record.failed = true; dropFilter(record); el.dataset.lgMode = 'frost';

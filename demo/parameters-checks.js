@@ -116,14 +116,14 @@ export async function runParameterChecks(output) {
         skip('默认位移贴图', '贴图不可解码或不是 1:1');
       } else {
         const middle = Math.floor(base.width / 2);
-        check('默认 44px 边缘带在 30px 处生效', green(base.map, base.width, middle, 30) !== 128);
-        check('默认 44px 边缘带在 50px 处归零', green(base.map, base.width, middle, 50) === 128);
+        check('默认 15px 边缘带在 10px 处生效', green(base.map, base.width, middle, 10) !== 128);
+        check('默认 15px 边缘带在 20px 处归零', green(base.map, base.width, middle, 20) === 128);
         const center = (Math.floor(base.height / 2) * base.width + middle) * 4;
         check('贴图中心与 Alpha 保持中性', base.map[center] === 128 && base.map[center + 1] === 128
           && base.map[center + 2] === 128 && base.map[center + 3] === 255);
       }
 
-      const explicit = await opticsRun(300, 200, { refraction: 110, dispersion: 14, edgeWidth: 44 });
+      const explicit = await opticsRun(300, 200, { refraction: 110, dispersion: 14, edgeWidth: 15 });
       check('显式默认值强度一致', defaultScales(explicit.scales), explicit.scales.join(','));
       check('显式默认值复现默认贴图', !!explicit.map && !!base.map
         && explicit.map.length === base.map.length

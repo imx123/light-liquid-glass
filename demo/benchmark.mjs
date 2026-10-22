@@ -24,8 +24,9 @@ for (const args of samples) {
   }
 }
 makeMap(320, 220, 28);
-assert.equal(pixels[(0 * 320 + 160) * 4 + 1], 216);
-assert.equal(pixels[(29 * 320 + 160) * 4 + 1], 134);
+assert.equal(pixels[(0 * 320 + 160) * 4 + 1], 205);
+assert.equal(pixels[(10 * 320 + 160) * 4 + 1], 133);
+assert.equal(pixels[(20 * 320 + 160) * 4 + 1], 128);
 for (let i = 0; i < 3; i++) makeMap(600, 600, 28);
 const times = [];
 for (let i = 0; i < 9; i++) {
