@@ -20,6 +20,7 @@ export async function runLensChecks(output) {
     check('唯一光学模型为 Lens', api.getState().opticalModel === 'lens');
     if (api.getState().full !== 1) {
       output.textContent += '\nSKIP Full Lens SVG 检查：当前实际模式未启用 Full';
+      results.push({name:'Full Lens SVG 检查',ok:true,skipped:true,detail:'原生背景滤镜未启用 Full，未使用背景图原型'});
       return { results, passed: 1, failed: 0, skipped: 1 };
     }
     const image = new Image(); image.src = filterOf(card).querySelector('feImage').getAttribute('href');

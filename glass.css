@@ -12,7 +12,7 @@
 /* 显式背景图原型：只过滤装饰图层，文字、输入和鼠标光斑独立。 */
 .lg-glass > [data-lg-background] { position: absolute; display: block; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: -2; }
 .lg-glass > [data-lg-background] > svg { display: block; overflow: visible; filter: blur(var(--lg-center-blur, 2px)) saturate(120%); }
-.lg-glass > [data-lg-background]::after { content: ""; position: absolute; inset: 0; background: var(--lg-tint, linear-gradient(135deg, #c2ceff1e, #23315388 65%, #bbc6ff10)); }
+.lg-glass > [data-lg-background]::after { content: ""; position: absolute; inset: 0; opacity: var(--lg-image-tint-opacity, 1); background: var(--lg-tint, linear-gradient(135deg, #c2ceff1e, #23315388 65%, #bbc6ff10)); }
 @media (prefers-reduced-transparency: reduce) {
   .lg-glass { background: var(--lg-solid, #1b253b); backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   .lg-glass::before { display: none; }

@@ -21,6 +21,7 @@ export async function runIntegrationChecks(output) {
     api = createLiquidGlass({ root: host, quality: 'light', optics: { refraction: 145, dispersion: 20, edgeWidth: 30 } });
     if (api.getState().light !== 1) {
       output.textContent = 'SKIP 跨任务 SVG 检查：当前环境回退';
+      results.push({name:'跨任务 SVG 检查',ok:true,skipped:true,detail:'原生背景滤镜当前回退，未使用背景图原型'});
       return { passed: 0, failed: 0, skipped: 1, results };
     }
     const scales = () => [...filterFor(card).querySelectorAll('feDisplacementMap')].map(n => n.getAttribute('scale')).join(',');

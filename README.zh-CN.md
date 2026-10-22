@@ -43,7 +43,9 @@ const glass = createLiquidGlass({
 });
 ```
 
-原型将图像与可选纵向渐变画进卡片的装饰层，使用普通 SVG filter 复用 Lens 滤镜，保留文字和控件独立。页面背景也须采用相同的颜色、渐变、固定定位和 cover 规则；演示样式提供完整例子。不能自动适配任意 CSS 背景、变换或嵌套玻璃。getState().renderer 为 background-image 或 backdrop；前者的 compatibility 为 background-image-experimental，能力检查失败时为 unsupported。点击“运行全部自检”会额外执行 12 项原型 DOM 检查；这些检查不能代替视觉验收。
+原型将图像与可选纵向渐变画进卡片的装饰层，使用普通 SVG filter 复用 Lens 滤镜，保留文字和控件独立。页面背景也须采用相同的颜色、渐变、固定定位和 cover 规则；演示样式提供完整例子。不能自动适配任意 CSS 背景、变换或嵌套玻璃。getState().renderer 为 background-image 或 backdrop；前者的 compatibility 为 background-image-experimental，能力检查失败时为 unsupported。点击“运行全部自检”会额外执行 17 项原型 DOM 和光学检查；这些检查不能代替视觉验收。
+
+原型演示默认使用“通透叠色（55%）”，可切回“原始叠色（100%）”对比；仅改变卡片着色覆盖层，模糊仍为 2px、边缘带宽仍为 15px。核心背景图着色覆盖层可用 `--lg-image-tint-opacity` 调节，默认 1；不影响整张卡片和文字的透明度。自检会逐项显示跳过原因；Firefox 下原生背景滤镜检查仍可跳过，原型路径单独检查三通道和 Lens 像素，跳过不计入通过。
 
 ## 放进现有页面
 

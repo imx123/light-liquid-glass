@@ -25,6 +25,23 @@ export async function runBackgroundChecks(output, background) {
     const scene = () => layer()?.querySelector('g > svg');
     check('背景采用视口坐标',Number(scene()?.getAttribute('x')) === -rect.left
       && Number(scene()?.getAttribute('width')) === document.documentElement.clientWidth);
+    const filterId = /#([^"')]+)/.exec(layer().querySelector('g[filter]').getAttribute('filter'))?.[1];
+    const filter = document.getElementById(filterId);
+    const channels = [...filter.querySelectorAll('feDisplacementMap')];
+    check('原型 Full 实际包含三个位移通道',channels.length === 3);
+    check('原型 Full 默认通道强度正确',channels.length === 3 && channels.every((node,i) =>
+      Math.abs(Number(node.getAttribute('scale')) - [109.8152,110,110.1848][i]) < 1e-8));
+    const image = new Image(); image.src = filter.querySelector('feImage').getAttribute('href');await image.decode();
+    check('原型 Lens 贴图与面板尺寸一致',image.naturalWidth === Math.round(rect.width) && image.naturalHeight === Math.round(rect.height));
+    const canvas = document.createElement('canvas');canvas.width = image.naturalWidth;canvas.height = image.naturalHeight;
+    const context = canvas.getContext('2d',{willReadFrequently:true});context.drawImage(image,0,0);
+    const pixels = context.getImageData(0,0,canvas.width,canvas.height).data;
+    const green = y => pixels[(y * canvas.width + Math.floor(canvas.width/2))*4+1];
+    check('原型默认 15px Lens 像素正确',green(0) === 205 && green(10) === 133 && green(20) === 128);
+    card.style.setProperty('--lg-image-tint-opacity','.55');
+    check('通透叠色只降低装饰层透明度',Number(getComputedStyle(layer(),'::after').opacity) === .55
+      && api.getState().full === 1 && getComputedStyle(card).opacity === '1');
+    card.style.removeProperty('--lg-image-tint-opacity');
     const builds = api.getState().mapBuilds;
     host.scrollTop = 30;await frame();
     check('滚动中背景立即对齐',Math.abs(Number(scene()?.getAttribute('y')) + card.getBoundingClientRect().top)<.6);

@@ -26,6 +26,7 @@
         <div><h2 id="parameters-title">参数调节</h2><p id="parameters-help">拖动时显示数值，松开滑块后应用。也可用方向键微调。</p></div>
         <button type="button" id="reset-parameters">恢复默认参数</button>
       </div>
+      <label id="image-tint-control" hidden>背景图材质 <select id="image-tint"><option value="55">通透叠色（55%）</option><option value="100">原始叠色（100%）</option></select></label>
       <div class="parameter-grid">
         <div><label for="refraction">折射幅度 <output id="refraction-value" for="refraction">110</output></label><input id="refraction" type="range" min="0" max="200" step="1" value="110" aria-describedby="parameters-help"></div>
         <div><label for="dispersion">色散 <output id="dispersion-value" for="dispersion">14</output></label><input id="dispersion" type="range" min="0" max="50" step="1" value="14" aria-describedby="parameters-help"></div>

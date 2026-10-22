@@ -29,6 +29,14 @@ const rendererLink = new URL(location.href);
 rendererLink.searchParams.set('renderer', background ? 'native' : 'background');
 $('renderer-toggle').href = rendererLink.href;
 $('renderer-toggle').textContent = background ? '切回原生背景采样' : '预览 Firefox 背景图原型';
+function applyImageTint() {
+  root.style.setProperty('--lg-image-tint-opacity', String(Number($('image-tint').value) / 100));
+}
+if (background) {
+  $('image-tint-control').hidden = false;
+  $('image-tint').addEventListener('change', applyImageTint);
+  applyImageTint();
+}
 let glass, applied;
 function reportState(state) {
   document.documentElement.dataset.demoQuality = state.quality;
@@ -66,6 +74,7 @@ for (const name of Object.keys(defaults)) {
 }
 $('reset-parameters').addEventListener('click', () => {
   for (const [name, value] of Object.entries(defaults)) $(name).value = value;
+  if (background) { $('image-tint').value = '55'; applyImageTint(); }
   showParameterValues(); applyParameters();
 });
 showParameterValues(); applyParameters();
@@ -87,8 +96,18 @@ $('remove-card').addEventListener('click', () => {
 });
 $('checks').addEventListener('click', async () => {
   $('checks').disabled = true;
-  const output = $('check-results'), summaries = [], failures = [];
+  const output = $('check-results'), summaries = [], failures = [], skipDetails = [];
   let passed = 0, failed = 0, skipped = 0;
+  const recordResult = (name, result) => {
+    passed += result.passed; failed += result.failed; skipped += result.skipped || 0;
+    summaries.push(`${name}：${result.passed}/${result.passed + result.failed} 通过`
+      + (result.skipped ? `，${result.skipped} 跳过` : ''));
+    for (const item of result.results) {
+      const label = name + ' / ' + item.name + (item.detail ? '：' + item.detail : '');
+      if (!item.ok) failures.push(label);
+      if (item.skipped || item.status === 'skip') skipDetails.push(label);
+    }
+  };
   delete output.dataset.passed; delete output.dataset.failed; delete output.dataset.skipped;
   try {
     const { runParameterChecks } = await import('./parameters-checks.js');
@@ -101,21 +120,18 @@ $('checks').addEventListener('click', async () => {
       ['交互性能', runPerformanceChecks]]) {
       output.textContent = '正在运行：' + name;
       const result = await run(output);
-      passed += result.passed; failed += result.failed; skipped += result.skipped || 0;
-      summaries.push(`${name}：${result.passed}/${result.passed + result.failed} 通过`
-        + (result.skipped ? `，${result.skipped} 跳过` : ''));
-      for (const item of result.results.filter(r => !r.ok)) failures.push(name + ' / ' + item.name + (item.detail ? '：' + item.detail : ''));
+      recordResult(name, result);
     }
     if (background) {
       const { runBackgroundChecks } = await import('./background-checks.js');
       const result = await runBackgroundChecks(output, background);
-      passed += result.passed; failed += result.failed; skipped += result.skipped || 0;
-      summaries.push(`背景图原型：${result.passed}/${result.passed + result.failed} 通过`);
-      for (const item of result.results.filter(r => !r.ok)) failures.push('背景图原型 / ' + item.name);
+      recordResult('背景图原型', result);
     }
     output.dataset.passed = passed; output.dataset.failed = failed; output.dataset.skipped = skipped;
     output.textContent = summaries.join('\n') + `\n\n合计：${passed}/${passed + failed} 通过，${skipped} 跳过`
-      + (failures.length ? '\n' + failures.join('\n') : '');
+      + (failures.length ? '\n' + failures.join('\n') : '')
+      + (skipDetails.length ? '\n\n跳过项目（不计入通过）：\n' + skipDetails.join('\n') : '')
+      + (background && skipped ? '\n\n原生背景滤镜与背景图原型分别统计；原型结果见“背景图原型”一行。' : '');
   } catch (error) { output.textContent = 'FAIL: ' + error.message; output.dataset.failed = String(failed + 1); }
   finally { $('checks').disabled = false; }
 });
