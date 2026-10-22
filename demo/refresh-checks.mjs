@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 const source = readFileSync(new URL('../glass.js', import.meta.url), 'utf8');
 
-function environment() {
+function environment(withVisibility = true) {
   const stats = {rects:0, styles:0, scans:0, writes:0, readsAfterWrite:0};
-  const timers = new Map(), frames = new Map(), observers = [];
+  const timers = new Map(), frames = new Map(), observers = [], visibilityObservers = [];
   let id = 0;
   const write = () => { stats.writes++; };
   const read = () => { if (stats.writes) stats.readsAfterWrite++; };
@@ -62,11 +62,17 @@ function environment() {
     setTimeout:fn=>{timers.set(++id,fn);return id;}, clearTimeout:key=>timers.delete(key),
     requestAnimationFrame:fn=>{frames.set(++id,fn);return id;}, cancelAnimationFrame:key=>frames.delete(key)
   };
+  if (withVisibility) env.IntersectionObserver = class {
+    constructor(callback, options) {this.callback=callback;this.options=options;this.nodes=new Set();visibilityObservers.push(this);}
+    observe(el) {this.nodes.add(el);} unobserve(el) {this.nodes.delete(el);}
+    disconnect() {this.nodes.clear();this.disconnected=true;}
+    emit(el, visible) {this.callback([{target:el,isIntersecting:visible,intersectionRect:{width:visible?el.width:0,height:visible?el.height:0}}]);}
+  };
   const create = new Function(...Object.keys(env), source.replace('export function','function')
     +'\nreturn createLiquidGlass;')(...Object.values(env));
   const flush = queue => { const pending=[...queue.values()];queue.clear();for(const fn of pending)fn(); };
   function card() { const el = new Node(); el.dataset.liquidGlass='';root.append(el);return el; }
-  return {create,card,root,document,window,stats,reset,timers,frames,observers,
+  return {create,card,root,document,window,stats,reset,timers,frames,observers,visibilityObservers,
     flushTimers:()=>flush(timers), flushFrames:()=>flush(frames)};
 }
 let passed=0;
@@ -131,6 +137,53 @@ function check(name,fn) {fn();passed++;console.log('PASS '+name);}
     check('explicit refresh still discovers dynamic panels',()=>assert.equal(api.getState().elements,2));
     extra.isConnected=false;e.observers[0].callback([]);e.flushTimers();
     check('automatic resize refresh releases disconnected records',()=>assert.equal(api.getState().elements,1));
+  } finally {api.destroy();}
+}
+{
+  const e=environment();const card=e.card();card.top=1100;
+  const api=e.create({root:e.root,quality:'auto'});
+  const visibility=e.visibilityObservers[0];
+  try {
+    check('Auto initial offscreen panel creates no filter or bitmap',()=>{assert.equal(api.getState().filters,0);assert.equal(api.getState().mapBuilds,0);assert.equal(card.dataset.lgVisible,'false');});
+    e.document.dispatchEvent(new Event('scroll'));e.flushFrames();
+    card.top=100;visibility.emit(card,true);e.flushFrames();
+    check('newly visible panel becomes Light without running settle timer',()=>{assert.equal(card.dataset.lgMode,'light');assert.equal(card.dataset.lgVisible,'true');assert.equal(e.timers.size,1);});
+    const builds=api.getState().mapBuilds;
+    card.top=1100;visibility.emit(card,false);e.flushFrames();
+    check('leaving viewport releases SVG immediately',()=>{assert.equal(api.getState().filters,0);assert.equal(card.dataset.lgVisible,'false');});
+    card.top=100;visibility.emit(card,true);e.flushFrames();
+    check('reentering during same gesture reuses bitmap',()=>{assert.equal(card.dataset.lgMode,'light');assert.equal(api.getState().mapBuilds,builds);});
+    e.flushTimers();
+    check('settle upgrades newly visible panel to budgeted Full',()=>assert.equal(card.dataset.lgMode,'full'));
+    e.document.dispatchEvent(new Event('scroll'));e.flushFrames();
+    card.top=1100;visibility.emit(card,false);e.flushFrames();
+    card.top=100;visibility.emit(card,true);card.top=1100;visibility.emit(card,false);e.flushFrames();
+    check('latest visibility wins within a single animation frame',()=>{assert.equal(card.dataset.lgVisible,'false');assert.equal(api.getState().filters,0);});
+    card.top=100;visibility.emit(card,true);api.destroy();e.flushFrames();e.flushTimers();
+    check('destroy disconnects visibility observer and cancels entering work',()=>{assert.equal(visibility.disconnected,true);assert.equal(api.getState().filters,0);assert.equal(card.dataset.lgVisible,undefined);});
+  } finally {api.destroy();}
+}
+{
+  const e=environment(false);const card=e.card();card.top=1100;
+  const api=e.create({root:e.root,quality:'auto'});
+  try {
+    e.document.dispatchEvent(new Event('scroll'));e.flushFrames();
+    card.top=100;e.document.dispatchEvent(new Event('scroll'));e.flushFrames();
+    check('no-IntersectionObserver fallback handles entering mid-scroll',()=>{assert.equal(card.dataset.lgMode,'light');assert.equal(e.timers.size,1);});
+    card.top=1100;e.document.dispatchEvent(new Event('scroll'));e.flushFrames();
+    check('fallback also releases offscreen material before idle',()=>{assert.equal(api.getState().filters,0);assert.equal(card.dataset.lgVisible,'false');});
+  } finally {api.destroy();}
+}
+{
+  const e=environment();const card=e.card();const api=e.create({root:e.root,quality:'auto'});
+  const visibility=e.visibilityObservers[0];
+  try {
+    visibility.emit(card,false);e.flushFrames();
+    check('observer-clipped panel stays inactive even inside viewport bounds',()=>assert.equal(card.dataset.lgVisible,'false'));
+    api.setQuality('full');visibility.emit(card,false);e.flushFrames();
+    check('manual Full ignores visibility culling',()=>assert.equal(api.getState().full,1));
+    visibility.emit(card,true);api.setQuality('auto');
+    check('visibility changes in manual mode do not become stale on return to Auto',()=>assert.equal(api.getState().full,1));
   } finally {api.destroy();}
 }
 console.log(JSON.stringify({passed,scope:'Host DOM/scheduler model only; no real browser or GPU validation'}));

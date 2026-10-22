@@ -2,6 +2,11 @@
 import { createLiquidGlass } from '../glass.js';
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const frame = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+async function until(test) {
+  const end = performance.now() + 2000;
+  do { await frame(); if (test()) return true; } while (performance.now() < end);
+  return false;
+}
 
 export async function runPerformanceChecks(output) {
   const results = [];
@@ -12,7 +17,7 @@ export async function runPerformanceChecks(output) {
   const host = document.createElement('div');
   host.style.cssText='position:fixed;left:0;top:0;width:0;height:0;opacity:0;pointer-events:none';
   const cards=[];
-  let reads=0,api,changes;
+  let reads=0,api,changes,scrollHost,keepScrolling;
   try {
     for(let i=0;i<4;i++) {
       const el=document.createElement('div');el.className='lg-glass';el.dataset.liquidGlass='';
@@ -47,8 +52,40 @@ export async function runPerformanceChecks(output) {
     api.destroy();await wait(240);await frame();
     check('交互中销毁不留下滤镜或延后恢复',api.getState().disposed && api.getState().filters===0
       && cards.every(el=>!el.hasAttribute('data-lg-mode')));
+
+    // 用真实滚动容器和 IntersectionObserver 覆盖“连续滚动到新卡片”。
+    scrollHost=document.createElement('div');
+    scrollHost.style.cssText='position:fixed;left:16px;top:16px;width:220px;height:120px;overflow:auto;opacity:0;pointer-events:none';
+    const contents=document.createElement('div'),entering=document.createElement('div');
+    const offscreenTop=Math.max(innerHeight+300,600);
+    contents.style.cssText='position:relative;height:'+(offscreenTop+500)+'px';
+    entering.className='lg-glass';entering.dataset.liquidGlass='';
+    entering.style.cssText='position:absolute;left:0;top:'+offscreenTop+'px;width:160px;height:100px';
+    contents.append(entering);scrollHost.append(contents);document.body.append(scrollHost);
+    api=createLiquidGlass({root:scrollHost,quality:'auto'});
+    await wait(240);await frame();
+    check('离屏卡片初始化不生成滤镜或贴图',api.getState().filters===0 && api.getState().mapBuilds===0
+      && entering.dataset.lgVisible==='false');
+    const layoutHeight=scrollHost.scrollHeight;
+    keepScrolling=setInterval(()=>document.dispatchEvent(new Event('scroll')),20);
+    scrollHost.scrollTop=offscreenTop-40;
+    check('连续滚动中刚进入的卡片立即使用 Light',await until(()=>entering.dataset.lgMode==='light'));
+    check('进入时开启可见标记与折射滤镜',entering.dataset.lgVisible==='true' && api.getState().filters===1);
+    const enteredBuilds=api.getState().mapBuilds;
+    scrollHost.scrollTop=0;
+    check('滚出视口即释放滤镜',await until(()=>entering.dataset.lgVisible==='false' && api.getState().filters===0));
+    check('离屏不运行毛玻璃背景采样',getComputedStyle(entering).backdropFilter==='none');
+    check('离屏暂停不改变布局占位',scrollHost.scrollHeight===layoutHeight);
+    scrollHost.scrollTop=offscreenTop-40;
+    check('再次滚入无需等待停顿且复用贴图',await until(()=>entering.dataset.lgMode==='light')
+      && api.getState().mapBuilds===enteredBuilds);
+    clearInterval(keepScrolling);keepScrolling=undefined;
+    await wait(240);await frame();
+    check('停下后才将新卡片升级到 Full',entering.dataset.lgMode==='full');
+    api.destroy();
+    check('销毁恢复可见性属性',!entering.hasAttribute('data-lg-visible') && api.getState().filters===0);
   } catch(error) {check('检查未中断：'+error.message,false);}
-  finally {changes?.disconnect();api?.destroy();host.remove();}
+  finally {clearInterval(keepScrolling);changes?.disconnect();api?.destroy();scrollHost?.remove();host.remove();}
   const failed=results.filter(r=>!r.ok).length;
   return {passed:results.length-failed,failed,skipped:0,results};
 }

@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-Test environment: 2026-10-21, Windows, Node.js v26.10.0, Codex desktop Chromium. The performance update passed 116/116 browser checks with 0 skipped, 23 host scheduling checks and 75 byte-exact Lens map comparisons. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
+Test environment: 2026-10-22, Windows, Node.js v26.12.1. The visibility fix passed 35 host checks and 75 byte-exact Lens map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21; the expanded browser suite is pending for this fix. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
@@ -71,7 +71,7 @@ The module reports PASS/FAIL/SKIP lines for optics validation, clamping, map edg
 
 Light uses one displacement pass at `optics.refraction` (default 110), sharing the same curved-edge bitmap with Full. Full uses three passes for RGB dispersion. Switching modes reuses the bitmap.
 
-Auto assigns Full to at most 3 panels per controller, within a combined viewport-clipped area of 400,000 CSS pixels. Larger visible areas take priority; ties keep mount order. Other visible panels use Light, while offscreen panels use Frost. During scrolling or window resizing, existing Full panels temporarily use Light without measuring layout or generating maps in the transition. After 120ms without further events, Auto remeasures and restores its Full budget. Manual Full keeps full dispersion during interaction. The budget measures viewport intersection, without checking occlusion, CSS visibility or ancestor clipping; it makes no frame-rate promise.
+Auto assigns Full to at most 3 panels per controller, within a combined viewport-clipped area of 400,000 CSS pixels. Larger visible areas take priority; ties keep mount order. Other visible panels use Light. During scrolling or window resizing, Full panels temporarily use Light. IntersectionObserver activates newly entering panels as Light on the next animation frame, without waiting for the 120ms idle timer. Exiting panels release their SVG filter and suspend backdrop blur, shadow and pointer glow while retaining layout. After 120ms without further events, Auto restores its Full budget. Manual Full keeps its explicit rendering behavior. Intersection visibility is asynchronous and does not detect occlusion or CSS opacity; the budget makes no frame-rate promise. Environments without IntersectionObserver use one batched visibility check per scroll frame.
 
 Canvas generates a displacement map when geometry changes. With normalized inward distance `t = clamp(-d / band, 0, 1)`, Lens strength is `1 - sqrt(1 - (1 - t)^2)`. Optical normals use 1.5 times the corner radius, capped at half the shorter side. Full combines RGB and blends it into the baseline sample; Light uses a single baseline displacement. The text and controls stay outside the backdrop filter. Pointer movement only updates CSS coordinates.
 
@@ -91,7 +91,7 @@ A strict CSP must allow the local modules, generated `data:` images and required
 
 Demo files, checks and the validation record are under `demo/`.
 
-`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the 116 browser checks, including 10 adaptive-interaction checks. `node demo/refresh-checks.mjs` runs 23 host scheduler checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates this performance update.
+`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the browser checks, now including 9 new scroll-entry and offscreen-release checks; this expanded suite remains pending. `node demo/refresh-checks.mjs` runs 35 host scheduler checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates these performance updates.
 
 Code and documentation were written with AI assistance. The demo background is AI generated.
 

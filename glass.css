@@ -5,6 +5,8 @@
 .lg-glass:not([data-lg-mode="solid"]) { box-shadow: inset 7px -7px 18px #02081950, inset -7px 7px 18px #07132d45, 0 16px 44px #02061159; }
 .lg-glass[data-lg-mode="solid"] { background: var(--lg-solid, #1b253b); backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .lg-glass[data-lg-mode="solid"]::before { display: none; }
+.lg-glass[data-lg-visible="false"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: none; }
+.lg-glass[data-lg-visible="false"]::before { display: none; }
 
 @media (prefers-reduced-motion: reduce) { .lg-glass::before { display: none; } }
 @media (prefers-reduced-transparency: reduce) {

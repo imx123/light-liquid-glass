@@ -118,13 +118,14 @@ export function createLiquidGlass(options = {}) {
   if (typeof onChange !== 'function') throw new TypeError('Glass onChange must be a function');
   const abort = new AbortController();
   const records = new Map(), cache = new Map();
+  const visibilityChanges = new Map();
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const transparency = matchMedia('(prefers-reduced-transparency: reduce)');
   const coarse = matchMedia('(pointer: coarse)');
   const chromium = /Chrome\/|Chromium\/|Edg\//.test(navigator.userAgent)
     && !/Firefox|FxiOS|CriOS|EdgiOS|iPhone|iPad|Android/.test(navigator.userAgent)
     && CSS.supports('backdrop-filter', 'url("#lg-probe")');
-  let svg, defs, timer, frame = 0, viewportFrame = 0, moving = false;
+  let svg, defs, timer, visibilityObserver, frame = 0, viewportFrame = 0, moving = false;
   let pending = null, active = null, disposed = false, mapBuilds = 0;
   const listen = (target, event, fn, signal = abort.signal) =>
     target.addEventListener(event, fn, { passive: true, signal });
@@ -168,7 +169,7 @@ export function createLiquidGlass(options = {}) {
   function mount(el) {
     if (owners.has(el)) return;
     const record = { el, abort: new AbortController(), filter: null, failed: false, signature: '',
-      attrs: new Map(['data-lg-mode', 'data-pointer-light'].map(key => [key, el.getAttribute(key)])),
+      attrs: new Map(['data-lg-mode', 'data-lg-visible', 'data-pointer-light'].map(key => [key, el.getAttribute(key)])),
       styles: new Map(['backdrop-filter', '-webkit-backdrop-filter', '--lg-mx', '--lg-my'].map(key =>
         [key, { value: el.style.getPropertyValue(key), priority: el.style.getPropertyPriority(key) }])) };
     owners.set(el, record); records.set(el, record);
@@ -176,9 +177,11 @@ export function createLiquidGlass(options = {}) {
     for (const event of ['pointerleave', 'pointercancel']) listen(el, event, () => hide(record), record.abort.signal);
     el.dataset.pointerLight = 'false';
     observer.observe(el);
+    visibilityObserver?.observe(el);
   }
   function unmount(record) {
-    hide(record); record.abort.abort(); observer.unobserve(record.el); dropFilter(record);
+    hide(record); record.abort.abort(); observer.unobserve(record.el); visibilityObserver?.unobserve(record.el);
+    visibilityChanges.delete(record); dropFilter(record);
     for (const [key, old] of record.styles) {
       old.value ? record.el.style.setProperty(key, old.value, old.priority) : record.el.style.removeProperty(key);
     }
@@ -218,31 +221,40 @@ export function createLiquidGlass(options = {}) {
   }
   function measure(record) {
     const el = record.el, rect = el.getBoundingClientRect();
-    if (el.dataset.liquidGlass === 'frost' || !chromium || coarse.matches || record.failed
-      || rect.width <= 0 || rect.height <= 0 || rect.width * rect.height > MAX_PANEL_AREA) return null;
     const width = Math.min(rect.right, innerWidth) - Math.max(rect.left, 0);
     const height = Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0);
-    return { rect, area: width > 0 && height > 0 ? width * height : 0 };
+    const supported = el.dataset.liquidGlass !== 'frost' && chromium && !coarse.matches && !record.failed
+      && rect.width > 0 && rect.height > 0 && rect.width * rect.height <= MAX_PANEL_AREA;
+    return { rect, area: width > 0 && height > 0 ? width * height : 0, supported };
+  }
+  function geometryFor(record, metrics) {
+    try {
+      const w = Math.round(metrics.rect.width), h = Math.round(metrics.rect.height);
+      const raw = getComputedStyle(record.el).borderTopLeftRadius;
+      const radius = Math.min(w / 2, h / 2, (parseFloat(raw) || 0) * (raw.endsWith('%') ? Math.min(w, h) / 100 : 1));
+      return { w, h, radius };
+    } catch (error) { return { error }; }
+  }
+  function setVisible(record, visible) {
+    record.inView = visible;
+    if (record.el.dataset.lgVisible !== String(visible)) record.el.dataset.lgVisible = String(visible);
+    if (!visible && (active === record || pending?.record === record)) hide(record);
   }
   function planModes() {
-    const plan = new Map(), candidates = [], geometry = new Map();
+    const plan = new Map(), candidates = [], geometry = new Map(), views = new Map();
     let order = 0;
     for (const record of records.values()) {
       const el = record.el;
+      views.set(record, true);
       if (transparency.matches || quality === 'solid') { plan.set(record, 'solid'); continue; }
-      if (quality === 'frost' || el.dataset.liquidGlass === 'frost') { plan.set(record, 'frost'); continue; }
+      if (quality === 'frost') { plan.set(record, 'frost'); continue; }
       const metrics = measure(record);
-      if (metrics) {
-        // 在任何材质写入前批量读尺寸与圆角，避免逐面板读写交错。
-        try {
-          const w = Math.round(metrics.rect.width), h = Math.round(metrics.rect.height);
-          const raw = getComputedStyle(el).borderTopLeftRadius;
-          const radius = Math.min(w / 2, h / 2, (parseFloat(raw) || 0) * (raw.endsWith('%') ? Math.min(w, h) / 100 : 1));
-          geometry.set(record, { w, h, radius });
-        } catch (error) { geometry.set(record, { error }); }
-      }
-      if (quality === 'full' || quality === 'light') { plan.set(record, metrics ? quality : 'frost'); continue; }
-      if (!metrics || !metrics.area) { plan.set(record, 'frost'); continue; }
+      const visible = quality !== 'auto' || (metrics.area > 0 && record.observedVisible !== false);
+      views.set(record, visible);
+      if (!metrics.supported || !visible) { plan.set(record, 'frost'); continue; }
+      // 在任何材质写入前批量读尺寸与圆角；离屏面板不算贴图几何。
+      geometry.set(record, geometryFor(record, metrics));
+      if (quality === 'full' || quality === 'light') { plan.set(record, quality); continue; }
       if (moving) { plan.set(record, 'light'); continue; }
       candidates.push({ record, area: metrics.area, order: order++ });
     }
@@ -254,7 +266,7 @@ export function createLiquidGlass(options = {}) {
         plan.set(record, 'full'); fullPanels++; fullArea += area;
       } else plan.set(record, 'light');
     }
-    return { plan, geometry };
+    return { plan, geometry, views };
   }
   function apply(record, mode, geometry) {
     const el = record.el;
@@ -298,14 +310,18 @@ export function createLiquidGlass(options = {}) {
       mapBuilds, cachedMaps: cache.size, disposed };
   }
   function render() {
-    const { plan, geometry } = planModes();
-    for (const record of records.values()) apply(record, plan.get(record) || 'frost', geometry.get(record));
+    const { plan, geometry, views } = planModes();
+    for (const record of records.values()) {
+      setVisible(record, views.get(record));
+      apply(record, plan.get(record) || 'frost', geometry.get(record));
+    }
     onChange(getState());
   }
   function refresh() {
     if (disposed) return;
     clearTimeout(timer); timer = 0;
     moving = false; cancelAnimationFrame(viewportFrame); viewportFrame = 0;
+    visibilityChanges.clear();
     const elements = new Set(root.querySelectorAll('[data-liquid-glass]'));
     if (root.matches?.('[data-liquid-glass]')) elements.add(root);
     for (const [el, record] of records) if (!elements.has(el) || !el.isConnected) unmount(record);
@@ -320,26 +336,57 @@ export function createLiquidGlass(options = {}) {
       timer = 0;
       if (disposed) return;
       moving = false; cancelAnimationFrame(viewportFrame); viewportFrame = 0;
+      visibilityChanges.clear();
       for (const record of records.values()) if (!record.el.isConnected) unmount(record);
       render();
     }, VIEWPORT_REFRESH_MS);
   }
   function viewportChange() {
     if (disposed) return;
-    if (quality === 'auto' && !moving) {
+    if (quality === 'auto') {
+      const started = !moving;
       moving = true;
-      // 操作期间用基准折射；只换滤镜，沿用旧几何与位图，不在滚动帧重算 PNG。
-      viewportFrame = requestAnimationFrame(() => {
-        viewportFrame = 0;
-        if (disposed || !moving || quality !== 'auto') return;
-        let changed = false;
-        for (const record of records.values()) if (record.el.dataset.lgMode === 'full') {
-          apply(record, 'light', record.geometry); changed = true;
-        }
-        if (changed) onChange(getState());
-      });
+      // 没有 IntersectionObserver 时，每帧批量检查一次，仍不等滚动停止。
+      if (!visibilityObserver) for (const record of records.values()) visibilityChanges.set(record, undefined);
+      if (started || !visibilityObserver) queueViewportUpdate();
     }
     scheduleRefresh();
+  }
+  function visibilityChanged(entries) {
+    if (disposed) return;
+    for (const entry of entries) {
+      const record = records.get(entry.target);
+      if (!record) continue;
+      const visible = entry.isIntersecting && entry.intersectionRect.width > 0 && entry.intersectionRect.height > 0;
+      record.observedVisible = visible;
+      if (quality === 'auto' && (visibilityChanges.has(record) || record.inView !== visible)) visibilityChanges.set(record, visible);
+    }
+    if (visibilityChanges.size) queueViewportUpdate();
+  }
+  function queueViewportUpdate() {
+    if (viewportFrame) return;
+    viewportFrame = requestAnimationFrame(() => {
+      viewportFrame = 0;
+      if (disposed || quality !== 'auto') return;
+      if (!moving) { visibilityChanges.clear(); render(); return; }
+      const work = new Map();
+      for (const record of records.values()) if (record.el.dataset.lgMode === 'full') {
+        work.set(record, { visible: true, mode: 'light', geometry: record.geometry });
+      }
+      // 只测刚进入视口的面板；离开的直接释放。所有读取仍先于材质写入。
+      for (const [record, visible] of visibilityChanges) {
+        if (!records.has(record.el)) continue;
+        if (visible === false) { work.set(record, { visible: false, mode: 'frost' }); continue; }
+        const metrics = measure(record), inView = metrics.area > 0;
+        work.set(record, { visible: inView, mode: inView && metrics.supported ? 'light' : 'frost',
+          geometry: inView && metrics.supported ? geometryFor(record, metrics) : undefined });
+      }
+      visibilityChanges.clear();
+      for (const [record, update] of work) {
+        setVisible(record, update.visible); apply(record, update.mode, update.geometry);
+      }
+      if (work.size) onChange(getState());
+    });
   }
   function setQuality(value) {
     if (!MODES.includes(value)) throw new TypeError('Unknown glass quality: ' + value);
@@ -348,12 +395,17 @@ export function createLiquidGlass(options = {}) {
   function destroy() {
     if (disposed) return;
     disposed = true; abort.abort(); observer.disconnect(); clearTimeout(timer); hide();
+    visibilityObserver?.disconnect(); visibilityChanges.clear();
     cancelAnimationFrame(viewportFrame); viewportFrame = 0;
     for (const record of [...records.values()]) unmount(record);
     svg?.remove(); cache.clear();
   }
   // 构造期间出错时 API 尚未交给调用方，必须先回滚，再保留原始异常。
   try {
+    // 极小的正阈值覆盖“刚好贴边、相交面积为零”后首次露出像素的变化。
+    if (typeof IntersectionObserver === 'function') {
+      visibilityObserver = new IntersectionObserver(visibilityChanged, { threshold: [0, .000001] });
+    }
     listen(window, 'blur', () => hide());
     listen(document, 'visibilitychange', () => { if (document.hidden) hide(); });
     listen(motion, 'change', () => { if (motion.matches) hide(); });
