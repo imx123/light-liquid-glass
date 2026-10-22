@@ -1,9 +1,5 @@
 # light-liquid-glass
 
-测试环境：Windows、Node.js v26.12.1，2026-10-22。69 项 host 逻辑检查通过，75 组 Lens 贴图逐字节一致。此前版本在 2026-10-21 通过了 Chromium 116/116 项检查。
-
-用户已反馈安卓 Edge Light 测试正常，并认可 Firefox 原型调整后的目测效果。更新后的完整浏览器自检、安卓 Full 画面仍待验证，GPU 帧耗时尚未测量。各轮结果见 [VALIDATION.md](demo/VALIDATION.md)。
-
 [English](README.md) · 中文
 
 一个用原生 HTML、CSS 和 JavaScript 写的网站液态玻璃效果。折射集中在圆角边缘，混入少量 RGB 色散，中央保留轻微模糊。鼠标移入卡片时有跟随光斑，移出后隐藏。
