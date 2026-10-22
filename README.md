@@ -1,9 +1,5 @@
 # light-liquid-glass
 
-Test environment: Windows, Node.js v26.12.1, 2026-10-22. The host checks passed 69 cases, and 75 Lens map comparisons matched byte for byte. An earlier version passed 116/116 Chromium checks on 2026-10-21.
-
-The user reported that Android Edge Light worked and approved the revised Firefox prototype by visual inspection. The updated browser suite and physical Android Full rendering still need testing. GPU frame rates have not been measured. Results and test scope are in [VALIDATION.md](demo/VALIDATION.md).
-
 English · [中文说明](README.zh-CN.md)
 
 A liquid glass effect for websites, built with plain HTML, CSS and JavaScript. Refraction follows the rounded edges, with a small amount of RGB dispersion and a lightly blurred center. A soft glow follows the pointer and disappears when it leaves the panel.
