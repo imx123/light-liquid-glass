@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-Test environment: 2026-10-22, Windows, Node.js v26.12.1. Visibility and Android compatibility logic passed 50 host checks; the Lens implementation passed 75 byte-exact map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21. The user reported successful Android Edge Light testing; updated browser checks and physical Android Full rendering remain pending. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
+Test environment: 2026-10-22, Windows, Node.js v26.12.1. Visibility and Android compatibility logic passed 69 host checks; the Lens implementation passed 75 byte-exact map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21. The user reported successful Android Edge Light testing; updated browser checks, physical Android Full rendering, and the Firefox background-image prototype remain pending. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
@@ -17,6 +17,12 @@ The effect started in a chat interface and is packaged as two files. A soft glow
 With Node.js 18+, run `node demo/server.mjs` and open <http://localhost:4178>. The server binds to loopback by default. Sliders control refraction (0–200), dispersion (0–50), edge width (1–120px) and liquid backdrop blur (0–12px, step 0.1). Values update during dragging; the effect applies on release. Arrow keys also work. Reset restores 110 / 14 / 15px / 2px while preserving input, dynamic cards and the current quality. Reloading restores default parameters. The demo also includes a mode selector and a button to run the browser checks.
 
 For phone testing, connect the phone and computer to a mutually reachable LAN. In PowerShell, set `$env:HOST="your LAN IPv4"; $env:PORT="4179"; node demo/server.mjs`, then open `http://your-LAN-IPv4:4179/` on the phone. The server only exposes allowlisted demo files.
+
+## Firefox background-image prototype
+
+The demo selects this prototype on desktop and Android Firefox. Use `/?renderer=background` to preview it in another browser, or `/?renderer=native` for native backdrop sampling. It only refracts a supplied background image; text, video and overlapping cards behind the panel are not captured. Auto uses Light; manual Full enables RGB refraction. Both modes release offscreen copies and align visible copies on each scroll frame. Defaults remain 15px / 2px. Firefox rendering and GPU performance are not yet verified.
+
+Pass `background: { image, overlayTop, overlayBottom, color }` to createLiquidGlass after decoding the image. Only image is required; the other fields provide optional gradient endpoints and a base color. The page must use the same viewport-fixed, centered cover image and gradient, as shown in the demo stylesheet. The prototype applies ordinary SVG filters to a decorative copy and leaves the panel text and controls independent. Arbitrary CSS backgrounds, transformed or nested glass are outside its scope. getState().renderer reports background-image or backdrop; the prototype compatibility is background-image-experimental, or unsupported when its feature check fails. The demo adds 12 prototype DOM checks to its browser checks; they do not replace visual acceptance. See the [Chinese example](README.zh-CN.md).
 
 ## Add it to a page
 
@@ -95,7 +101,7 @@ A strict CSP must allow the local modules, generated `data:` images and required
 
 Demo files, checks and the validation record are under `demo/`.
 
-`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the platform-aware browser checks, including 9 scroll-entry and offscreen-release checks; this expanded suite remains pending. Android Auto stays on Light; manual Full runs the three-channel optical checks. Checks that have not been run are not counted as accepted. `node demo/refresh-checks.mjs` runs 50 host scheduler/compatibility checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates these updates.
+`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the platform-aware browser checks, including 9 scroll-entry and offscreen-release checks; this expanded suite remains pending. Android Auto stays on Light; manual Full runs the three-channel optical checks. Checks that have not been run are not counted as accepted. `node demo/refresh-checks.mjs` runs 69 host scheduler/compatibility checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates these updates.
 
 Code and documentation were written with AI assistance. The demo background is AI generated.
 

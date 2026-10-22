@@ -112,6 +112,12 @@ export function createLiquidGlass(options = {}) {
   let { quality = 'auto' } = options;
   if (!MODES.includes(quality)) throw new TypeError('Unknown glass quality: ' + quality);
   const optics = normalizeOptics(opticsInput);
+  // 背景图原型必须显式提供图像；不尝试截图或复制业务 DOM。
+  const background = options.background;
+  if (background !== undefined && (!background || typeof background !== 'object'
+      || typeof background.image !== 'string' || !background.image.trim())) {
+    throw new TypeError('Glass background must provide an image URL');
+  }
   const root = options.root === undefined ? document : options.root;
   const { onChange = () => {} } = options;
   if (!root || typeof root.querySelectorAll !== 'function') throw new TypeError('Glass root must support querySelectorAll');
@@ -128,6 +134,7 @@ export function createLiquidGlass(options = {}) {
   const desktopChromium = !/Android/.test(ua) && /Chrome\/|Chromium\/|Edg\//.test(ua) && !excludedEngine;
   const chromium = (desktopChromium || androidChromium)
     && CSS.supports('backdrop-filter', 'url("#lg-probe")');
+  const supportsRefraction = background ? CSS.supports('filter', 'url("#lg-probe")') : chromium;
   let svg, defs, timer, visibilityObserver, frame = 0, viewportFrame = 0, moving = false;
   let pending = null, active = null, disposed = false, mapBuilds = 0;
   const listen = (target, event, fn, signal = abort.signal) =>
@@ -161,6 +168,9 @@ export function createLiquidGlass(options = {}) {
     });
   }
   function dropFilter(record) {
+    record.backgroundAbort?.abort(); record.backgroundAbort = null;
+    record.backgroundLayer?.remove(); record.backgroundLayer = null;
+    record.backgroundPicture = null; record.backgroundScene = null;
     if (!record.filter) return;
     record.filter.remove();
     record.filter = null; record.signature = ''; record.variant = '';
@@ -222,11 +232,55 @@ export function createLiquidGlass(options = {}) {
     }
     defs.append(filter); Object.assign(record, { filter, map, id, variant });
   }
+  function paintBackground(record, geometry) {
+    const { el, id } = record;
+    if (!record.backgroundLayer) {
+      const layer = document.createElement('span');
+      layer.setAttribute('data-lg-background', ''); layer.setAttribute('aria-hidden', 'true');
+      const picture = svgNode('svg', { width: '100%', height: '100%' });
+      const localDefs = svgNode('defs');
+      const gradientId = id + '-overlay';
+      const gradient = svgNode('linearGradient', { id: gradientId, x1: 0, y1: 0, x2: 0, y2: 1 });
+      gradient.append(svgNode('stop', { offset: 0, 'stop-color': background.overlayTop || 'transparent' }),
+        svgNode('stop', { offset: 1, 'stop-color': background.overlayBottom || 'transparent' }));
+      localDefs.append(gradient);
+      const filtered = svgNode('g', { filter: 'url("#' + id + '")' });
+      const scene = svgNode('svg', { preserveAspectRatio: 'none' });
+      const base = svgNode('rect', { width: '100%', height: '100%', fill: background.color || 'transparent' });
+      const image = svgNode('image', { width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid slice', href: background.image });
+      const overlay = svgNode('rect', { width: '100%', height: '100%', fill: 'url("#' + gradientId + '")' });
+      scene.append(base, image, overlay); filtered.append(scene); picture.append(localDefs, filtered); layer.append(picture);
+      const backgroundAbort = new AbortController();
+      image.addEventListener('error', () => {
+        record.failed = true; dropFilter(record); el.dataset.lgMode = 'frost'; onChange(getState());
+      }, { signal: backgroundAbort.signal });
+      Object.assign(record, { backgroundLayer: layer, backgroundPicture: picture, backgroundScene: scene,
+        backgroundPosition: '', backgroundAbort });
+      el.append(layer);
+    }
+    const { w, h, rect, borderLeft, borderTop, viewportWidth, viewportHeight } = geometry;
+    const key = [w, h, rect.width, rect.height, rect.left, rect.top, viewportWidth, viewportHeight, borderLeft, borderTop].join(':');
+    if (record.backgroundPosition === key) return;
+    record.backgroundPosition = key;
+    const layer = record.backgroundLayer;
+    layer.style.cssText = 'left:' + -borderLeft + 'px;top:' + -borderTop
+      + 'px;width:' + rect.width + 'px;height:' + rect.height + 'px';
+    record.backgroundPicture.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    for (const [name, value] of Object.entries({ x: -rect.left, y: -rect.top, width: viewportWidth, height: viewportHeight })) {
+      record.backgroundScene.setAttribute(name, value);
+    }
+    // 普通 filter 的区域按卡片定义，避免整个视口成为每块玻璃的滤镜边界。
+    const padding = Math.ceil(optics.refraction * .51 + 36);
+    for (const [name, value] of Object.entries({ filterUnits: 'userSpaceOnUse', x: -padding, y: -padding,
+      width: w + padding * 2, height: h + padding * 2 })) {
+      record.filter.setAttribute(name, value);
+    }
+  }
   function measure(record) {
     const el = record.el, rect = el.getBoundingClientRect();
     const width = Math.min(rect.right, innerWidth) - Math.max(rect.left, 0);
     const height = Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0);
-    const supported = el.dataset.liquidGlass !== 'frost' && chromium && (!coarse.matches || androidChromium) && !record.failed
+    const supported = el.dataset.liquidGlass !== 'frost' && supportsRefraction && (!coarse.matches || androidChromium || background) && !record.failed
       && rect.width > 0 && rect.height > 0 && rect.width * rect.height <= MAX_PANEL_AREA;
     return { rect, area: width > 0 && height > 0 ? width * height : 0, supported };
   }
@@ -235,7 +289,10 @@ export function createLiquidGlass(options = {}) {
       const w = Math.round(metrics.rect.width), h = Math.round(metrics.rect.height);
       const raw = getComputedStyle(record.el).borderTopLeftRadius;
       const radius = Math.min(w / 2, h / 2, (parseFloat(raw) || 0) * (raw.endsWith('%') ? Math.min(w, h) / 100 : 1));
-      return { w, h, radius };
+      return { w, h, radius, rect: metrics.rect, borderLeft: background ? record.el.clientLeft || 0 : 0,
+        borderTop: background ? record.el.clientTop || 0 : 0,
+        viewportWidth: background ? document.documentElement?.clientWidth || innerWidth : innerWidth,
+        viewportHeight: background ? document.documentElement?.clientHeight || innerHeight : innerHeight };
     } catch (error) { return { error }; }
   }
   function setVisible(record, visible) {
@@ -252,13 +309,13 @@ export function createLiquidGlass(options = {}) {
       if (transparency.matches || quality === 'solid') { plan.set(record, 'solid'); continue; }
       if (quality === 'frost') { plan.set(record, 'frost'); continue; }
       const metrics = measure(record);
-      const visible = quality !== 'auto' || (metrics.area > 0 && record.observedVisible !== false);
+      const visible = (quality !== 'auto' && !background) || (metrics.area > 0 && record.observedVisible !== false);
       views.set(record, visible);
       if (!metrics.supported || !visible) { plan.set(record, 'frost'); continue; }
       // 在任何材质写入前批量读尺寸与圆角；离屏面板不算贴图几何。
       geometry.set(record, geometryFor(record, metrics));
       // 安卓 Auto 保留单次折射；手动 Full 开放三通道，便于真机对比。
-      if (androidChromium && quality === 'auto') { plan.set(record, 'light'); continue; }
+      if ((androidChromium || background) && quality === 'auto') { plan.set(record, 'light'); continue; }
       if (quality === 'full' || quality === 'light') { plan.set(record, quality); continue; }
       if (moving) { plan.set(record, 'light'); continue; }
       candidates.push({ record, area: metrics.area, order: order++ });
@@ -282,7 +339,10 @@ export function createLiquidGlass(options = {}) {
       const { w, h, radius } = geometry;
       record.geometry = geometry;
       const signature = [w, h, radius, optics.edgeWidth].join(':');
-      if (record.filter && record.variant === mode && record.signature === signature) return;
+      if (record.filter && record.variant === mode && record.signature === signature) {
+        if (background) paintBackground(record, geometry);
+        return;
+      }
       if (!record.filter || record.variant !== mode) {
         dropFilter(record);
         ensureFilter(record, mode);
@@ -301,7 +361,9 @@ export function createLiquidGlass(options = {}) {
       record.map.setAttribute('width', w); record.map.setAttribute('height', h);
       record.signature = signature;
       // 中央清晰，只有贴图边缘参与折射；文字不经过滤镜。
-      el.style.setProperty('backdrop-filter', 'url("#' + record.id + '") blur(var(--lg-center-blur, 2px)) saturate(120%)');
+      if (background) paintBackground(record, geometry);
+      el.style.setProperty('backdrop-filter', background ? 'none'
+        : 'url("#' + record.id + '") blur(var(--lg-center-blur, 2px)) saturate(120%)');
       el.style.setProperty('-webkit-backdrop-filter', el.style.getPropertyValue('backdrop-filter'));
     } catch (error) {
       record.failed = true; dropFilter(record); el.dataset.lgMode = 'frost';
@@ -311,8 +373,10 @@ export function createLiquidGlass(options = {}) {
   function getState() {
     const counts = { full: 0, light: 0, frost: 0, solid: 0 };
     for (const { el } of records.values()) if (counts[el.dataset.lgMode] !== undefined) counts[el.dataset.lgMode]++;
-    const compatibility = !chromium ? 'unsupported' : androidChromium ? 'android-experimental' : 'desktop';
-    return { quality, opticalModel: 'lens', compatibility, ...counts, elements: records.size, filters: defs?.childElementCount || 0,
+    const compatibility = !supportsRefraction ? 'unsupported' : background ? 'background-image-experimental'
+      : androidChromium ? 'android-experimental' : 'desktop';
+    return { quality, opticalModel: 'lens', compatibility, renderer: background ? 'background-image' : 'backdrop',
+      ...counts, elements: records.size, filters: defs?.childElementCount || 0,
       mapBuilds, cachedMaps: cache.size, disposed };
   }
   function render() {
@@ -349,6 +413,7 @@ export function createLiquidGlass(options = {}) {
   }
   function viewportChange() {
     if (disposed) return;
+    if (background) queueViewportUpdate();
     if (quality === 'auto') {
       const started = !moving;
       moving = true;
@@ -365,7 +430,7 @@ export function createLiquidGlass(options = {}) {
       if (!record) continue;
       const visible = entry.isIntersecting && entry.intersectionRect.width > 0 && entry.intersectionRect.height > 0;
       record.observedVisible = visible;
-      if (quality === 'auto' && (visibilityChanges.has(record) || record.inView !== visible)) visibilityChanges.set(record, visible);
+      if ((quality === 'auto' || background) && (visibilityChanges.has(record) || record.inView !== visible)) visibilityChanges.set(record, visible);
     }
     if (visibilityChanges.size) queueViewportUpdate();
   }
@@ -373,7 +438,10 @@ export function createLiquidGlass(options = {}) {
     if (viewportFrame) return;
     viewportFrame = requestAnimationFrame(() => {
       viewportFrame = 0;
-      if (disposed || quality !== 'auto') return;
+      if (disposed) return;
+      // 背景副本在滚动的每帧校准位置，手动 Full 也不能等 120ms 才对齐。
+      if (background) { visibilityChanges.clear(); render(); return; }
+      if (quality !== 'auto') return;
       if (!moving) { visibilityChanges.clear(); render(); return; }
       const work = new Map();
       for (const record of records.values()) if (record.el.dataset.lgMode === 'full') {
@@ -417,7 +485,7 @@ export function createLiquidGlass(options = {}) {
     listen(motion, 'change', () => { if (motion.matches) hide(); });
     listen(transparency, 'change', refresh); listen(coarse, 'change', refresh);
     // 捕获内部滚动容器的 scroll；与尺寸观察共用一个防抖定时器。
-    document.addEventListener('scroll', () => { if (quality === 'auto') viewportChange(); },
+    document.addEventListener('scroll', () => { if (quality === 'auto' || background) viewportChange(); },
       { passive: true, capture: true, signal: abort.signal });
     listen(window, 'resize', viewportChange);
     refresh();

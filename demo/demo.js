@@ -8,6 +8,27 @@ try { const value = localStorage.getItem(storageKey); if (['auto', 'full', 'ligh
 $('quality').value = saved;
 const root = document.querySelector('main');
 const defaults = { refraction: 110, dispersion: 14, edgeWidth: 15, blur: 2 };
+const rendererChoice = new URLSearchParams(location.search).get('renderer');
+const wantsBackground = rendererChoice === 'background'
+  || (rendererChoice !== 'native' && /Firefox\//.test(navigator.userAgent) && !/FxiOS/.test(navigator.userAgent));
+let background;
+if (wantsBackground) {
+  try {
+    const image = new Image(); image.src = new URL('background.png', import.meta.url).href;
+    await image.decode();
+    background = { image: image.src, overlayTop: '#090e203d', overlayBottom: '#090e2059', color: '#101226' };
+    document.documentElement.dataset.demoRenderer = 'background-image';
+    $('renderer-state').hidden = false;
+    $('renderer-state').textContent = '背景图折射原型：只重画背景图，不采样后方文字或其他卡片。Auto 使用 Light，可手动切换液态折射。';
+  } catch {
+    $('renderer-state').hidden = false;
+    $('renderer-state').textContent = '背景图加载失败，已返回浏览器默认材质。';
+  }
+}
+const rendererLink = new URL(location.href);
+rendererLink.searchParams.set('renderer', background ? 'native' : 'background');
+$('renderer-toggle').href = rendererLink.href;
+$('renderer-toggle').textContent = background ? '切回原生背景采样' : '预览 Firefox 背景图原型';
 let glass, applied;
 function reportState(state) {
   document.documentElement.dataset.demoQuality = state.quality;
@@ -15,6 +36,7 @@ function reportState(state) {
   if (state.full) layers.push('液态折射 ' + state.full);
   if (state.light) layers.push('轻量折射 ' + state.light);
   if ((state.light || state.full) && state.compatibility === 'android-experimental') layers.push('安卓试验支持');
+  if ((state.light || state.full) && state.renderer === 'background-image') layers.push('背景图原型');
   $('state').textContent = layers.length ? layers.join(' · ') + ' · 共 ' + state.elements + ' 个玻璃面板'
     : state.solid ? '纯色模式 · 透明效果关闭' : '毛玻璃 · 兼容模式 · ' + state.elements + ' 个玻璃面板';
 }
@@ -32,7 +54,7 @@ function applyParameters() {
   root.style.setProperty('--lg-center-blur', next.blur + 'px');
   if (!glass || ['refraction', 'dispersion', 'edgeWidth'].some(name => next[name] !== applied[name])) {
     glass?.destroy();
-    glass = createLiquidGlass({ root, quality: $('quality').value,
+    glass = createLiquidGlass({ root, quality: $('quality').value, background,
       optics: { refraction: next.refraction, dispersion: next.dispersion, edgeWidth: next.edgeWidth }, onChange: reportState });
   }
   applied = next;
@@ -83,6 +105,13 @@ $('checks').addEventListener('click', async () => {
       summaries.push(`${name}：${result.passed}/${result.passed + result.failed} 通过`
         + (result.skipped ? `，${result.skipped} 跳过` : ''));
       for (const item of result.results.filter(r => !r.ok)) failures.push(name + ' / ' + item.name + (item.detail ? '：' + item.detail : ''));
+    }
+    if (background) {
+      const { runBackgroundChecks } = await import('./background-checks.js');
+      const result = await runBackgroundChecks(output, background);
+      passed += result.passed; failed += result.failed; skipped += result.skipped || 0;
+      summaries.push(`背景图原型：${result.passed}/${result.passed + result.failed} 通过`);
+      for (const item of result.results.filter(r => !r.ok)) failures.push('背景图原型 / ' + item.name);
     }
     output.dataset.passed = passed; output.dataset.failed = failed; output.dataset.skipped = skipped;
     output.textContent = summaries.join('\n') + `\n\n合计：${passed}/${passed + failed} 通过，${skipped} 跳过`

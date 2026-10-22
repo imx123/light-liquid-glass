@@ -2,6 +2,8 @@
 :root { color-scheme: dark; font-family: "Segoe UI", system-ui, sans-serif; color: #edf0ff; background: #101226; }
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; padding: 28px; background: linear-gradient(#090e203d, #090e2059), url('background.png') center / cover fixed #101226; }
+html[data-demo-renderer="background-image"] body { background: linear-gradient(#090e203d, #090e2059) center / 100% 100% fixed no-repeat, url('background.png') center / cover fixed no-repeat #101226; }
+#renderer-state { max-width: 720px; margin: 12px auto; font-size: 13px; color: #bec9e5; }
 main { max-width: 1140px; margin: auto; }
 .topbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 16px 24px; flex-wrap: wrap; }
 a { color: #e5e5ff; text-decoration: none; }

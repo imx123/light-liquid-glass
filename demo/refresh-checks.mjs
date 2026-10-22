@@ -45,7 +45,7 @@ function environment(withVisibility = true, settings = {}) {
   }
   const document = new Node('document'); document.body = new Node('body');
   document.createElementNS = (_,tag) => new Node(tag);
-  document.createElement = () => ({getContext:() => settings.canvasFailure ? null : ({
+  document.createElement = tag => tag !== 'canvas' ? new Node(tag) : ({getContext:() => settings.canvasFailure ? null : ({
     createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}), putImageData() {}
   }), toDataURL:()=> 'data:image/png;host-fixture'});
   const root = new Node(), window = new EventTarget();
@@ -53,7 +53,8 @@ function environment(withVisibility = true, settings = {}) {
   const env = {
     document, window, navigator:{userAgent:settings.ua || 'Chrome/130'}, CSS:{supports:()=>settings.css !== false}, innerWidth:1280, innerHeight:960,
     AbortController, console:{warn(){}},
-    matchMedia:query=>Object.assign(new EventTarget(),{matches:query==='(pointer: coarse)' && !!settings.coarse}),
+    matchMedia:query=>Object.assign(new EventTarget(),{matches:(query==='(pointer: coarse)' && !!settings.coarse)
+      || (query==='(prefers-reduced-transparency: reduce)' && !!settings.solid)}),
     getComputedStyle:el=>{ stats.styles++; read(); return {borderTopLeftRadius:el.radius}; },
     ResizeObserver:class {
       constructor(callback) {this.callback=callback; observers.push(this);}
@@ -222,6 +223,58 @@ function check(name,fn) {fn();passed++;console.log('PASS '+name);}
   ]) {
     const model=environment(true,settings);model.card();const controller=model.create({root:model.root,quality:'full'});
     try {check(name,()=>assert.equal(controller.getState()[expected],1));} finally {controller.destroy();}
+  }
+}
+{
+  const e=environment(true,{ua:'Mozilla/5.0 Android Firefox/145',coarse:true});
+  const card=e.card();card.left=30;card.top=40;card.clientLeft=1;card.clientTop=1;
+  const background={image:'http://fixture/background.png',overlayTop:'#090e203d',overlayBottom:'#090e2059',color:'#101226'};
+  const api=e.create({root:e.root,quality:'auto',background});
+  const layer=()=>card.children.find(n=>n.attrs.has('data-lg-background'));
+  const scene=()=>layer().children[0].children[1].children[0];
+  try {
+    check('Firefox background prototype enables Light on touch',()=>{assert.equal(api.getState().light,1);assert.equal(api.getState().renderer,'background-image');});
+    check('prototype uses normal SVG filter instead of backdrop URL',()=>{
+      assert.equal(card.style.getPropertyValue('backdrop-filter'),'none');
+      assert.match(layer().children[0].children[1].getAttribute('filter'),/^url\(/);
+    });
+    check('background image is viewport-cover aligned to panel',()=>{
+      assert.equal(scene().getAttribute('x'),'-30');assert.equal(scene().getAttribute('y'),'-40');
+      assert.equal(scene().getAttribute('width'),'1280');
+      assert.equal(scene().children[1].getAttribute('preserveAspectRatio'),'xMidYMid slice');
+      assert.match(layer().style.cssText,/left:-1px;top:-1px/);
+    });
+    e.reset();api.refresh();
+    check('stable background refresh performs no material writes',()=>assert.equal(e.stats.writes,0));
+    const builds=api.getState().mapBuilds;
+    api.setQuality('full');
+    check('prototype manual Full enables three channels',()=>assert.equal(api.getState().full,1));
+    card.top=5;e.document.dispatchEvent(new Event('scroll'));e.flushFrames();
+    check('Full scrolling aligns background before idle timer',()=>{assert.equal(scene().getAttribute('y'),'-5');assert.equal(api.getState().full,1);});
+    check('position updates reuse geometry map',()=>assert.equal(api.getState().mapBuilds,builds));
+    card.top=1100;e.visibilityObservers[0].emit(card,false);e.flushFrames();
+    check('offscreen Full releases background layer and filter',()=>{assert.equal(layer(),undefined);assert.equal(api.getState().filters,0);});
+    card.top=20;e.visibilityObservers[0].emit(card,true);e.flushFrames();
+    check('returning Full rebuilds only visible material',()=>{assert.equal(api.getState().full,1);assert.equal(scene().getAttribute('y'),'-20');assert.equal(api.getState().mapBuilds,builds);});
+    api.setQuality('frost');
+    check('Frost removes background copy and restores backdrop style',()=>{assert.equal(layer(),undefined);assert.equal(card.style.getPropertyValue('backdrop-filter'),'');});
+    api.setQuality('solid');
+    check('Solid removes all prototype filters',()=>assert.equal(api.getState().filters,0));
+    api.setQuality('light');scene().children[1].dispatchEvent(new Event('error'));
+    check('image error falls back and releases layer',()=>{assert.equal(api.getState().frost,1);assert.equal(layer(),undefined);assert.equal(api.getState().filters,0);});
+  } finally {api.destroy();}
+  check('prototype destroy releases observer and scheduled updates',()=>{assert.equal(e.frames.size+e.timers.size,0);assert.equal(e.document.body.children.length,0);assert.equal(card.children.length,0);});
+  for(const [name,settings,expected] of [
+    ['prototype respects reduced transparency',{solid:true},'solid'],
+    ['prototype CSS filter rejection falls back',{css:false},'frost'],
+    ['prototype Canvas failure falls back',{canvasFailure:true},'frost']
+  ]) {
+    const model=environment(true,{ua:'Firefox/145',...settings});const el=model.card();
+    const controller=model.create({root:model.root,quality:'full',background});
+    try {check(name,()=>{assert.equal(controller.getState()[expected],1);assert.equal(el.children.length,0);});} finally {controller.destroy();}
+  }
+  for(const value of [null,{}, {image:''}]) {
+    check('invalid background is rejected before mounting',()=>assert.throws(()=>e.create({root:e.root,background:value}),TypeError));
   }
 }
 console.log(JSON.stringify({passed,scope:'Host DOM/scheduler model only; no real browser or GPU validation'}));

@@ -1,5 +1,17 @@
 # 验证记录
 
+## 2026-10-22 Firefox 背景图折射原型
+
+用户选择背景副本方案。核心新增显式 background 选项，以普通 SVG filter 处理背景图装饰层，复用现有 Lens 贴图、Full 三通道与 Light 单通道。浏览器原生背景采样和未传 background 的 Firefox 回退保持原路径。演示在 Firefox 自动选择原型，也可通过 renderer 查询参数切换。
+
+- Auto 使用 Light；手动 Full 可对比完整折射。两者离屏时释放 SVG 和背景副本；滚动时按帧重新对齐，不等 120ms。边框偏移和视口滚动条宽度纳入定位。位置变化复用位图，图片失败时恢复毛玻璃，销毁释放副本和监听。
+- Host 69 项通过（原 50 项 + 原型 19 项）；15 个脚本语法检查通过；默认 Lens 数学检查通过。12 项新增浏览器 DOM 检查尚未实际执行。
+- 仅重画显式背景图及纵向渐变，不捕获后方 DOM、视频、其他卡片；页面背景需匹配固定于视口、居中 cover 规则。默认边缘 15px、模糊 2px。
+- 本机预览查询路由、核心脚本/样式、新检查脚本和背景图 HEAD 均返回 200；非白名单 PROJECT_HANDOFF.md 和 .git/config 返回 404。当前只监听 loopback。重新开放局域网被自动审批拒绝，理由是此前用户已要求关闭服务、此次未明确重新授权；未绕过。
+- Firefox 真实画面、接缝、滚动和 GPU 耗时待验收。此前浏览器 URL 安全策略拒绝访问，本轮未通过其他浏览器接口绕过；host 结果不当作视觉证明。
+
+依据：[MDN filter](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/filter)、[Mozilla 1972363](https://bugzilla.mozilla.org/show_bug.cgi?id=1972363)、[Mozilla 1961378](https://bugzilla.mozilla.org/show_bug.cgi?id=1961378)。
+
 ## 2026-10-22 默认参数调整
 
 按用户要求将默认 edgeWidth 改为 15px、液态背景模糊改为 2px；核心缺省值、演示滑块初值、“恢复默认参数”及双语 README 同步。refraction=110、dispersion=14 保留。下文 44px / 3px 仅为历史记录。

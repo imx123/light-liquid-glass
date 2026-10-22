@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-测试环境：2026-10-22，Windows、Node.js v26.12.1。可见性与安卓兼容分支通过 50 项 host 检查，Lens 贴图已通过 75 组逐字节对比。上一版于 2026-10-21 通过 Chromium 116/116 项检查；用户已反馈安卓 Edge Light 测试正常；本轮完整浏览器检查及安卓 Full 真机画面待验收，GPU 帧耗时尚未测量。详细结果见 [VALIDATION.md](demo/VALIDATION.md)。
+测试环境：2026-10-22，Windows、Node.js v26.12.1。可见性与安卓兼容分支通过 69 项 host 检查，Lens 贴图已通过 75 组逐字节对比。上一版于 2026-10-21 通过 Chromium 116/116 项检查；用户已反馈安卓 Edge Light 测试正常；本轮完整浏览器检查、安卓 Full 和 Firefox 背景图原型画面待验收，GPU 帧耗时尚未测量。详细结果见 [VALIDATION.md](demo/VALIDATION.md)。
 
 [English](README.md) · 中文
 
@@ -21,6 +21,29 @@ node demo/server.mjs
 ```
 
 打开 <http://localhost:4178>。顶栏可以切换自动、液态折射、轻量折射、毛玻璃和纯色。参数面板提供折射幅度（0–200）、色散（0–50）、边缘带宽（1–120px）和液态背景模糊（0–12px，步长 0.1）滑块：拖动时显示数值，松开后应用，也支持方向键微调。“恢复默认参数”回到 110 / 14 / 15px / 2px。调节保留输入内容、动态卡片和当前效果档位；刷新页面后参数回到默认值。下方可以添加、移除卡片，或运行全部自检。演示服务器默认只监听本机。手机测试时，让手机与电脑处于可互通的局域网；在 PowerShell 设置 `$env:HOST="电脑的局域网 IPv4"; $env:PORT="4179"; node demo/server.mjs`，再在手机打开 `http://电脑的局域网IPv4:4179/`。只提供演示白名单文件，不浏览项目目录。
+
+## Firefox 背景图原型
+
+演示页在桌面和安卓 Firefox 默认启用方案 1；其他浏览器可打开 `/?renderer=background` 对比，`/?renderer=native` 返回原生背景采样。仅提供背景图折射，不采样后方文字、视频或其他卡片。Auto 使用 Light，手动“液态折射”使用 Full；离屏时两档都移除副本，滚动时逐帧对齐，保持 15px / 2px 默认值。尚待 Firefox 实际画面与性能验收。
+
+核心通过显式 background 选项启用；接入方需提供与页面相同、居中 cover 且固定于视口的背景。背景图加载完成后再初始化，例如：
+
+```js
+const image = new Image();
+image.src = './background.png';
+await image.decode();
+const glass = createLiquidGlass({
+  quality: 'auto',
+  background: {
+    image: image.src,
+    overlayTop: '#090e203d',
+    overlayBottom: '#090e2059',
+    color: '#101226'
+  }
+});
+```
+
+原型将图像与可选纵向渐变画进卡片的装饰层，使用普通 SVG filter 复用 Lens 滤镜，保留文字和控件独立。页面背景也须采用相同的颜色、渐变、固定定位和 cover 规则；演示样式提供完整例子。不能自动适配任意 CSS 背景、变换或嵌套玻璃。getState().renderer 为 background-image 或 backdrop；前者的 compatibility 为 background-image-experimental，能力检查失败时为 unsupported。点击“运行全部自检”会额外执行 12 项原型 DOM 检查；这些检查不能代替视觉验收。
 
 ## 放进现有页面
 
@@ -133,7 +156,7 @@ Canvas 在初始化或尺寸变化时生成一张位移贴图。设距外缘向�
 
 一个控制器共用一个 ResizeObserver 和一个鼠标动画帧。刷新先批量读取几何和圆角，再修改材质；尺寸不变时避免重复写样式。自动尺寸刷新不再扫描成员，动态增减元素仍需显式 `refresh()`。贴图使用最多 8 张的 LRU 缓存，保留最近访问的尺寸；生成时跳过中性中心，Lens 像素不变。每张贴图约限 36 万像素，单卡片超过 120 万 CSS 像素会回退毛玻璃。`getState().opticalModel` 固定为 `lens`。
 
-`node demo/refresh-checks.mjs` 运行 50 项 host 调度与兼容分支检查，`node demo/performance.mjs` 对比优化前后 75 组贴图并交替采样 CPU 耗时。它们不替代浏览器或 GPU 验证。演示页“运行全部自检”包含 9 项连续滚动进入与离屏释放检查；安卓 Auto 使用 Light，手动 Full 运行三通道光学检查；未实际运行的检查不算已验收。
+`node demo/refresh-checks.mjs` 运行 69 项 host 调度与兼容分支检查，`node demo/performance.mjs` 对比优化前后 75 组贴图并交替采样 CPU 耗时。它们不替代浏览器或 GPU 验证。演示页“运行全部自检”包含 9 项连续滚动进入与离屏释放检查；安卓 Auto 使用 Light，手动 Full 运行三通道光学检查；未实际运行的检查不算已验收。
 
 运行 `node demo/benchmark.mjs` 可检查当前 Lens 贴图并测量 CPU 计算时间；它只包含像素数学和数组写入，不包含 PNG 编码、浏览器合成或 GPU 渲染。Full/Light 的背景模糊使用折射后的浏览器高斯模糊，默认 2px；没有复现 native 的有限 25 点采样核，也不声明与 native 逐像素一致。普通列表可使用 `data-liquid-glass="frost"`。
 
