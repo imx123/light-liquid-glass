@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-测试环境：2026-10-22，Windows、Node.js v26.12.1。可见性与安卓兼容分支通过 69 项 host 检查，Lens 贴图已通过 75 组逐字节对比。上一版于 2026-10-21 通过 Chromium 116/116 项检查；用户已反馈安卓 Edge Light 测试正常；本轮完整浏览器检查、安卓 Full 和 Firefox 背景图原型画面待验收，GPU 帧耗时尚未测量。详细结果见 [VALIDATION.md](demo/VALIDATION.md)。
+测试环境：2026-10-22，Windows、Node.js v26.12.1。可见性与安卓兼容分支通过 69 项 host 检查，Lens 贴图已通过 75 组逐字节对比。上一版于 2026-10-21 通过 Chromium 116/116 项检查；用户已反馈安卓 Edge Light 测试正常，并认可 Firefox 原型调整后的目测效果；更新后的完整浏览器检查及安卓 Full 画面仍待验收，GPU 帧耗时尚未测量。详细结果见 [VALIDATION.md](demo/VALIDATION.md)。
 
 [English](README.md) · 中文
 

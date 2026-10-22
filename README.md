@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-Test environment: 2026-10-22, Windows, Node.js v26.12.1. Visibility and Android compatibility logic passed 69 host checks; the Lens implementation passed 75 byte-exact map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21. The user reported successful Android Edge Light testing; updated browser checks, physical Android Full rendering, and the Firefox background-image prototype remain pending. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
+Test environment: 2026-10-22, Windows, Node.js v26.12.1. Visibility and Android compatibility logic passed 69 host checks; the Lens implementation passed 75 byte-exact map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21. The user reported successful Android Edge Light testing and approved the revised Firefox prototype appearance by visual inspection. Updated browser checks and physical Android Full rendering remain pending. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
