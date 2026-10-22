@@ -14,7 +14,9 @@ The effect started in a chat interface and is packaged as two files. A soft glow
 
 ## Run the demo
 
-With Node.js 18+, run `node demo/server.mjs` and open <http://localhost:4178>. The server binds to loopback only. Sliders control refraction (0–200), dispersion (0–50), edge width (1–120px) and liquid backdrop blur (0–12px, step 0.1). Values update during dragging; the effect applies on release. Arrow keys also work. Reset restores 110 / 14 / 44px / 3px while preserving input, dynamic cards and the current quality. Reloading restores default parameters. The demo also includes a mode selector and a button to run the browser checks.
+With Node.js 18+, run `node demo/server.mjs` and open <http://localhost:4178>. The server binds to loopback by default. Sliders control refraction (0–200), dispersion (0–50), edge width (1–120px) and liquid backdrop blur (0–12px, step 0.1). Values update during dragging; the effect applies on release. Arrow keys also work. Reset restores 110 / 14 / 44px / 3px while preserving input, dynamic cards and the current quality. Reloading restores default parameters. The demo also includes a mode selector and a button to run the browser checks.
+
+For phone testing, connect the phone and computer to a mutually reachable LAN. In PowerShell, set `$env:HOST="your LAN IPv4"; $env:PORT="4179"; node demo/server.mjs`, then open `http://your-LAN-IPv4:4179/` on the phone. The server only exposes allowlisted demo files.
 
 ## Add it to a page
 

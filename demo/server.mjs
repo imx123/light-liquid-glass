@@ -1,4 +1,4 @@
-// 演示服务器：只读白名单文件，只监听本机，无需 npm install。
+// 演示服务器：只读白名单文件，默认监听本机；可用 HOST 指定局域网地址。
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 const types = { html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', js: 'text/javascript; charset=utf-8',
@@ -12,6 +12,7 @@ files.set('/README.zh-CN.md', '../README.zh-CN.md');
 files.set('/demo/VALIDATION.md', 'VALIDATION.md');
 files.set('/demo/preview.png', 'preview.png');
 const port = Number(process.env.PORT || 4178);
+const host = process.env.HOST || '127.0.0.1';
 createServer(async (req, res) => {
   if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405); res.end(); return; }
   const name = files.get(req.url);
@@ -21,4 +22,4 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': types[name.split('.').pop()], 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
     res.end(req.method === 'HEAD' ? undefined : content);
   } catch { res.writeHead(500); res.end('Cannot read demo file'); }
-}).listen(port, '127.0.0.1', () => console.log('Liquid Glass v2: http://localhost:' + port));
+}).listen(port, host, () => console.log('Liquid Glass v2: http://' + host + ':' + port));
