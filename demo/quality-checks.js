@@ -34,7 +34,7 @@ export async function runQualityChecks(output) {
     results.push({ name, ok: true, skipped: true, detail: reason });
     lines.push('SKIP ' + name + ' — ' + reason); emit();
   };
-  let supportsLight = false;
+  let supportsLight = false, mobileLight = false;
 
   try {
     const selector = document.getElementById('quality');
@@ -50,6 +50,7 @@ export async function runQualityChecks(output) {
       const api = createLiquidGlass({ root: host, quality: 'light' });
       cleanups.push(() => { api.destroy(); host.remove(); });
       const initial = api.getState();
+      mobileLight = initial.compatibility === 'android-light-experimental';
       supportsLight = card.dataset.lgMode === 'light';
       if (supportsLight) {
         check('手动 light 对离屏面板生效', initial.light === 1 && initial.filters === 1);
@@ -82,8 +83,9 @@ export async function runQualityChecks(output) {
         const builds = api.getState().mapBuilds;
         api.setQuality('full');
         const fullFilter = filterFor(card), fullPrimitives = tagNames(fullFilter);
-        check('切到 full 重建 Lens 三通道与基准混合滤镜',
-          card.dataset.lgMode === 'full' && fullPrimitives.length === 10
+        check(mobileLight ? '安卓 full 请求保持单次折射' : '切到 full 重建 Lens 三通道与基准混合滤镜',
+          mobileLight ? card.dataset.lgMode === 'light' && fullPrimitives.length === 2
+          : card.dataset.lgMode === 'full' && fullPrimitives.length === 10
           && fullFilter?.querySelectorAll('feDisplacementMap').length === 3
           && fullFilter?.querySelectorAll('feColorMatrix').length === 3
           && fullFilter?.querySelectorAll('feComposite').length === 3, fullPrimitives.join(','));
@@ -129,9 +131,9 @@ export async function runQualityChecks(output) {
       const modes = () => cards.map(card => card.dataset.lgMode);
       const count = mode => modes().filter(value => value === mode).length;
       if (supportsLight) {
-        check('auto 只分配 3 个 Full 面板', count('full') === 3, modes().join(','));
-        check('其余可见面板使用 light', count('light') === 1 && count('frost') === 0, modes().join(','));
-        check('同面积按 DOM 顺序确定性分配', modes().join(',') === 'full,full,full,light', modes().join(','));
+        check(mobileLight ? '安卓 auto 不分配三通道 Full' : 'auto 只分配 3 个 Full 面板', count('full') === (mobileLight ? 0 : 3), modes().join(','));
+        check('其余可见面板使用 light', count('light') === (mobileLight ? 4 : 1) && count('frost') === 0, modes().join(','));
+        check('同面积按 DOM 顺序确定性分配', modes().join(',') === (mobileLight ? 'light,light,light,light' : 'full,full,full,light'), modes().join(','));
       } else {
         check('auto 在回退环境尊重透明度偏好', count(fallbackMode) === 4 && count('full') === 0, modes().join(','));
       }
@@ -157,7 +159,9 @@ export async function runQualityChecks(output) {
       const api = createLiquidGlass({ root: host, quality: 'auto' });
       cleanups.push(() => { api.destroy(); host.remove(); });
       const area = clippedArea(first);
-      if (supportsLight && area > 200000) {
+      if (supportsLight && mobileLight) {
+        check('安卓大面板仍只使用 light',first.dataset.lgMode==='light' && second.dataset.lgMode==='light');
+      } else if (supportsLight && area > 200000) {
         check('单块超过一半额度后第二块改为 light',
           first.dataset.lgMode === 'full' && second.dataset.lgMode === 'light',
           first.dataset.lgMode + ',' + second.dataset.lgMode + ' area=' + Math.round(area));
@@ -210,7 +214,8 @@ export async function runQualityChecks(output) {
   const executed = results.length - skipped;
   lines.push('\n' + (executed - failed) + '/' + executed + ' 通过'
     + (skipped ? '，' + skipped + ' 项因环境跳过' : '')
-    + '；light/full 路径：' + (supportsLight ? '已执行' : '环境回退，未覆盖'));
+    + '；light 路径：' + (supportsLight ? '已执行' : '环境回退，未覆盖')
+    + (mobileLight ? '；安卓 Full 请求限制为 Light' : ''));
   emit();
   return { passed: executed - failed, failed, skipped, lightPath: supportsLight, results };
 }

@@ -19,7 +19,7 @@ export async function runLensChecks(output) {
     api = createLiquidGlass({ root: host, quality: 'full' });
     check('唯一光学模型为 Lens', api.getState().opticalModel === 'lens');
     if (api.getState().full !== 1) {
-      output.textContent += '\nSKIP Lens SVG 检查：当前环境回退';
+      output.textContent += '\nSKIP Full Lens SVG 检查：当前实际模式未启用 Full';
       return { results, passed: 1, failed: 0, skipped: 1 };
     }
     const image = new Image(); image.src = filterOf(card).querySelector('feImage').getAttribute('href');

@@ -122,8 +122,11 @@ export function createLiquidGlass(options = {}) {
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const transparency = matchMedia('(prefers-reduced-transparency: reduce)');
   const coarse = matchMedia('(pointer: coarse)');
-  const chromium = /Chrome\/|Chromium\/|Edg\//.test(navigator.userAgent)
-    && !/Firefox|FxiOS|CriOS|EdgiOS|iPhone|iPad|Android/.test(navigator.userAgent)
+  const ua = navigator.userAgent;
+  const excludedEngine = /Firefox|FxiOS|CriOS|EdgiOS|iPhone|iPad/.test(ua);
+  const androidLight = /Android/.test(ua) && /Chrome\/|Chromium\/|EdgA\//.test(ua) && !excludedEngine;
+  const desktopChromium = !/Android/.test(ua) && /Chrome\/|Chromium\/|Edg\//.test(ua) && !excludedEngine;
+  const chromium = (desktopChromium || androidLight)
     && CSS.supports('backdrop-filter', 'url("#lg-probe")');
   let svg, defs, timer, visibilityObserver, frame = 0, viewportFrame = 0, moving = false;
   let pending = null, active = null, disposed = false, mapBuilds = 0;
@@ -223,7 +226,7 @@ export function createLiquidGlass(options = {}) {
     const el = record.el, rect = el.getBoundingClientRect();
     const width = Math.min(rect.right, innerWidth) - Math.max(rect.left, 0);
     const height = Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0);
-    const supported = el.dataset.liquidGlass !== 'frost' && chromium && !coarse.matches && !record.failed
+    const supported = el.dataset.liquidGlass !== 'frost' && chromium && (!coarse.matches || androidLight) && !record.failed
       && rect.width > 0 && rect.height > 0 && rect.width * rect.height <= MAX_PANEL_AREA;
     return { rect, area: width > 0 && height > 0 ? width * height : 0, supported };
   }
@@ -254,6 +257,8 @@ export function createLiquidGlass(options = {}) {
       if (!metrics.supported || !visible) { plan.set(record, 'frost'); continue; }
       // 在任何材质写入前批量读尺寸与圆角；离屏面板不算贴图几何。
       geometry.set(record, geometryFor(record, metrics));
+      // 安卓 Chromium 先开放单次折射试用；包括手动 Full 请求，避免三通道 GPU 开销。
+      if (androidLight) { plan.set(record, 'light'); continue; }
       if (quality === 'full' || quality === 'light') { plan.set(record, quality); continue; }
       if (moving) { plan.set(record, 'light'); continue; }
       candidates.push({ record, area: metrics.area, order: order++ });
@@ -306,7 +311,8 @@ export function createLiquidGlass(options = {}) {
   function getState() {
     const counts = { full: 0, light: 0, frost: 0, solid: 0 };
     for (const { el } of records.values()) if (counts[el.dataset.lgMode] !== undefined) counts[el.dataset.lgMode]++;
-    return { quality, opticalModel: 'lens', ...counts, elements: records.size, filters: defs?.childElementCount || 0,
+    const compatibility = !chromium ? 'unsupported' : androidLight ? 'android-light-experimental' : 'desktop';
+    return { quality, opticalModel: 'lens', compatibility, ...counts, elements: records.size, filters: defs?.childElementCount || 0,
       mapBuilds, cachedMaps: cache.size, disposed };
   }
   function render() {

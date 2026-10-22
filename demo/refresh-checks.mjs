@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 const source = readFileSync(new URL('../glass.js', import.meta.url), 'utf8');
 
-function environment(withVisibility = true) {
+function environment(withVisibility = true, settings = {}) {
   const stats = {rects:0, styles:0, scans:0, writes:0, readsAfterWrite:0};
   const timers = new Map(), frames = new Map(), observers = [], visibilityObservers = [];
   let id = 0;
@@ -45,15 +45,15 @@ function environment(withVisibility = true) {
   }
   const document = new Node('document'); document.body = new Node('body');
   document.createElementNS = (_,tag) => new Node(tag);
-  document.createElement = () => ({getContext:() => ({
+  document.createElement = () => ({getContext:() => settings.canvasFailure ? null : ({
     createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}), putImageData() {}
   }), toDataURL:()=> 'data:image/png;host-fixture'});
   const root = new Node(), window = new EventTarget();
   const reset = () => { for(const key of Object.keys(stats)) stats[key]=0; };
   const env = {
-    document, window, navigator:{userAgent:'Chrome/130'}, CSS:{supports:()=>true}, innerWidth:1280, innerHeight:960,
+    document, window, navigator:{userAgent:settings.ua || 'Chrome/130'}, CSS:{supports:()=>settings.css !== false}, innerWidth:1280, innerHeight:960,
     AbortController, console:{warn(){}},
-    matchMedia:()=>Object.assign(new EventTarget(),{matches:false}),
+    matchMedia:query=>Object.assign(new EventTarget(),{matches:query==='(pointer: coarse)' && !!settings.coarse}),
     getComputedStyle:el=>{ stats.styles++; read(); return {borderTopLeftRadius:el.radius}; },
     ResizeObserver:class {
       constructor(callback) {this.callback=callback; observers.push(this);}
@@ -185,5 +185,32 @@ function check(name,fn) {fn();passed++;console.log('PASS '+name);}
     visibility.emit(card,true);api.setQuality('auto');
     check('visibility changes in manual mode do not become stale on return to Auto',()=>assert.equal(api.getState().full,1));
   } finally {api.destroy();}
+}
+{
+  const androidUA='Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 EdgA/141.0.0.0';
+  const e=environment(true,{ua:androidUA,coarse:true});const card=e.card();const api=e.create({root:e.root,quality:'auto'});
+  try {
+    check('Android Edge touch device can activate Light',()=>{assert.equal(api.getState().light,1);assert.equal(api.getState().compatibility,'android-light-experimental');});
+    api.setQuality('full');
+    check('Android Full request stays at experimental single-pass Light',()=>{assert.equal(api.getState().light,1);assert.equal(api.getState().full,0);});
+    api.setQuality('frost');check('Android explicit Frost remains available',()=>assert.equal(api.getState().frost,1));
+    api.setQuality('solid');check('Android explicit Solid remains available',()=>assert.equal(api.getState().solid,1));
+    api.setQuality('auto');
+    const touch=new Event('pointermove');Object.defineProperty(touch,'pointerType',{value:'touch'});card.dispatchEvent(touch);
+    check('touch does not schedule mouse-follow glow',()=>{assert.equal(e.frames.size,0);assert.equal(card.dataset.pointerLight,'false');});
+    card.top=1100;e.visibilityObservers[0].emit(card,false);e.flushFrames();
+    check('Android Auto still releases offscreen filters',()=>assert.equal(api.getState().filters,0));
+  } finally {api.destroy();}
+  for(const [name,settings,expected] of [
+    ['Android CSS capability rejection',{ua:androidUA,coarse:true,css:false},'frost'],
+    ['Android Canvas failure',{ua:androidUA,coarse:true,canvasFailure:true},'frost'],
+    ['Android Firefox remains fallback',{ua:'Mozilla/5.0 Android Firefox/141',coarse:true},'frost'],
+    ['iPhone Edge remains fallback',{ua:'Mozilla/5.0 iPhone AppleWebKit/605.1 EdgiOS/141',coarse:true},'frost'],
+    ['desktop Edge retains Full',{ua:'Mozilla/5.0 Windows Chrome/141 Edg/141'},'full'],
+    ['desktop coarse-pointer policy unchanged',{ua:'Mozilla/5.0 Windows Chrome/141 Edg/141',coarse:true},'frost'],
+  ]) {
+    const model=environment(true,settings);model.card();const controller=model.create({root:model.root,quality:'full'});
+    try {check(name,()=>assert.equal(controller.getState()[expected],1));} finally {controller.destroy();}
+  }
 }
 console.log(JSON.stringify({passed,scope:'Host DOM/scheduler model only; no real browser or GPU validation'}));

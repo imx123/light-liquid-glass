@@ -1,5 +1,14 @@
 # 验证记录
 
+## 2026-10-22 安卓 Edge 试验支持
+
+用户确认反馈来自安卓 Edge，并授权尝试适配。原实现显式排除 Android UA，同时禁止 coarse 主指针。现在对 Android Chromium 开放单次 Light，保留 CSS 能力检查、尺寸上限、Canvas 失败回退及系统透明度偏好。Auto / Full / Light 请求在该平台都使用 Light；没有启用三通道 Full。触摸不触发鼠标跟随光斑。
+
+- Host 总计 47 项通过，新增 12 项覆盖安卓 Edge UA + coarse、Full 限制为 Light、手动 Frost/Solid、触摸光斑、离屏释放、CSS/Canvas 失败、安卓 Firefox/iPhone Edge 回退及桌面行为。
+- 更新浏览器质量、集成和交互检查，按照实际平台选择断言；Android Light 不被误算为 Full 覆盖，只针对 Full 的检查会跳过。
+- `compatibility=android-light-experimental` 是候选路径标记，不是真机兼容性证明。实际安卓 Edge 的 SVG 背景采样、画面与 GPU 帧耗时尚未验证；CSS.supports 返回 true 不能代替这些验收。
+- 本轮未改 Lens 栅格公式；此前 75 组逐像素比较仍作为光学算法回归证据。
+
 ## 2026-10-22 滚动可见性修复
 
 用户报告连续滚动时，新进入视口的卡片仍为毛玻璃，要等 120ms 停顿才开启折射。上一轮的滚动帧只降级原本已开启的 Full，确实没有接入新卡片。

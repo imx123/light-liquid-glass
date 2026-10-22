@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-Test environment: 2026-10-22, Windows, Node.js v26.12.1. The visibility fix passed 35 host checks and 75 byte-exact Lens map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21; the expanded browser suite is pending for this fix. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
+Test environment: 2026-10-22, Windows, Node.js v26.12.1. Visibility and Android compatibility logic passed 47 host checks; the Lens implementation passed 75 byte-exact map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21. Updated browser checks and physical Android Edge rendering remain pending. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
@@ -81,7 +81,9 @@ Run `node demo/benchmark.mjs` to check the current Lens map and measure CPU pixe
 
 ## Compatibility
 
-Full and Light use the SVG backdrop-filter path in desktop Chromium. A successful feature check is only a candidate signal; inspect the rendered result on the target device. Other engines and coarse primary pointers fall back to frost. Reduced transparency selects solid material, and reduced motion suppresses the pointer glow.
+Full and Light use SVG backdrop-filter in desktop Chromium. Android Chromium, including Edge with an Android UA, has experimental Light support: Auto, Full and Light requests use single-pass Light, including on coarse-pointer devices. Frost and Solid remain explicit choices; touch events do not animate the mouse-follow glow. `getState().compatibility` reports `android-light-experimental`, `desktop` or `unsupported`. The demo labels active Android Light accordingly. iOS, Firefox and other unsupported engines keep their prior fallback. Desktop coarse-pointer policy is unchanged.
+
+A successful feature check is only a candidate signal; it does not prove that SVG backdrop sampling renders correctly on a phone. Failed CSS capability checks or Canvas setup fall back to frost. Physical Android Edge rendering and GPU performance still require testing. Reduced transparency selects solid material, and reduced motion suppresses the pointer glow.
 
 Use equal, non-elliptical corner radii, preferably a px value for `--lg-radius`. Avoid nested glass or scaling and rotating the glass element, which changes backdrop sampling and pointer coordinates.
 
@@ -91,7 +93,7 @@ A strict CSP must allow the local modules, generated `data:` images and required
 
 Demo files, checks and the validation record are under `demo/`.
 
-`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the browser checks, now including 9 new scroll-entry and offscreen-release checks; this expanded suite remains pending. `node demo/refresh-checks.mjs` runs 35 host scheduler checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates these performance updates.
+`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the platform-aware browser checks, including 9 scroll-entry and offscreen-release checks; this expanded suite remains pending. Full-only optical checks are skipped on Android Light rather than reported as Full coverage. `node demo/refresh-checks.mjs` runs 47 host scheduler/compatibility checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates these updates.
 
 Code and documentation were written with AI assistance. The demo background is AI generated.
 
