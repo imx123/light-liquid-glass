@@ -190,9 +190,20 @@ function check(name,fn) {fn();passed++;console.log('PASS '+name);}
   const androidUA='Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 EdgA/141.0.0.0';
   const e=environment(true,{ua:androidUA,coarse:true});const card=e.card();const api=e.create({root:e.root,quality:'auto'});
   try {
-    check('Android Edge touch device can activate Light',()=>{assert.equal(api.getState().light,1);assert.equal(api.getState().compatibility,'android-light-experimental');});
+    check('Android Edge touch device can activate Light',()=>{assert.equal(api.getState().light,1);assert.equal(api.getState().compatibility,'android-experimental');});
+    const builds=api.getState().mapBuilds;
     api.setQuality('full');
-    check('Android Full request stays at experimental single-pass Light',()=>{assert.equal(api.getState().light,1);assert.equal(api.getState().full,0);});
+    check('Android manual Full activates full refraction',()=>{assert.equal(api.getState().full,1);assert.equal(api.getState().light,0);});
+    check('Android Full builds three displacement channels and RGB blend',()=>{
+      const filter=e.document.body.children.find(n=>n.tag==='svg').children[0].children[0];
+      assert.equal(filter.children.length,10);
+      assert.equal(filter.children.filter(n=>n.tag==='feDisplacementMap').length,3);
+      assert.equal(filter.children.at(-1).getAttribute('in2'),'rgb');
+    });
+    e.reset();e.document.dispatchEvent(new Event('scroll'));e.flushFrames();e.flushTimers();
+    check('Android manual Full scroll retains full mode and cached map',()=>{assert.equal(api.getState().full,1);assert.equal(api.getState().mapBuilds,builds);assert.equal(e.stats.rects,0);});
+    api.setQuality('light');
+    check('Android can switch back to Light without rebuilding map',()=>{assert.equal(api.getState().light,1);assert.equal(api.getState().filters,1);assert.equal(api.getState().mapBuilds,builds);});
     api.setQuality('frost');check('Android explicit Frost remains available',()=>assert.equal(api.getState().frost,1));
     api.setQuality('solid');check('Android explicit Solid remains available',()=>assert.equal(api.getState().solid,1));
     api.setQuality('auto');

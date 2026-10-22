@@ -1,5 +1,13 @@
 # 验证记录
 
+## 2026-10-22 安卓手动 Full 试验
+
+用户反馈安卓 Edge Light 测试正常，并要求开放全量折射。手动 Full 现在使用与桌面相同的三通道位移、RGB 混合；Auto 仍为 Light，手动 Light / Frost / Solid 与失败回退不变。平台标记改为 android-experimental，演示状态同时标注 Full 和 Light 的安卓试验支持。
+
+- 50 项 host 检查通过，验证 Android Full 的 10 个滤镜节点、三个位移通道、RGB 混合、滚动时保持 Full、切回 Light 复用贴图。14 个脚本语法检查通过。
+- 质量、集成和性能浏览器检查已改为实际检查 Android Full；Lens / 参数检查原本按实际 Full 模式执行，此次可进入该路径。此轮完整浏览器检查未运行。
+- Light 真机结果来自用户反馈；Full 画面、完整自检及 GPU 帧耗时仍待手机验收。下文“Full 限制为 Light”为前一阶段历史记录，已被本节覆盖。
+
 ## 2026-10-22 安卓 Edge 试验支持
 
 用户确认反馈来自安卓 Edge，并授权尝试适配。原实现显式排除 Android UA，同时禁止 coarse 主指针。现在对 Android Chromium 开放单次 Light，保留 CSS 能力检查、尺寸上限、Canvas 失败回退及系统透明度偏好。Auto / Full / Light 请求在该平台都使用 Light；没有启用三通道 Full。触摸不触发鼠标跟随光斑。

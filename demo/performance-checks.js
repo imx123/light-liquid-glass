@@ -29,11 +29,11 @@ export async function runPerformanceChecks(output) {
     document.body.append(host);
     api=createLiquidGlass({root:host,quality:'auto'});
     await wait(240);await frame();
-    const mobileLight=api.getState().compatibility==='android-light-experimental';
-    if(mobileLight ? api.getState().light!==4 : api.getState().full!==3 || api.getState().light!==1) {
+    const androidAutoLight=api.getState().compatibility==='android-experimental';
+    if(androidAutoLight ? api.getState().light!==4 : api.getState().full!==3 || api.getState().light!==1) {
       return {passed:0,failed:0,skipped:1,results:[{name:'交互性能路径',ok:true,skipped:true,detail:'折射不可用或视口不足'}]};
     }
-    check(mobileLight ? '安卓 Auto 静止时使用 Light' : 'Auto 静止时仍使用 3 Full + 1 Light',true);
+    check(androidAutoLight ? '安卓 Auto 静止时使用 Light' : 'Auto 静止时仍使用 3 Full + 1 Light',true);
     changes=new MutationObserver(()=>{});changes.observe(host,{attributes:true,subtree:true});
     reads=0;api.refresh();
     check('稳定刷新每个面板只读取一次尺寸',reads===4);
@@ -43,11 +43,11 @@ export async function runPerformanceChecks(output) {
     check('Auto 滚动期间临时使用 Light',api.getState().light===4 && api.getState().quality==='auto');
     check('临时切换不读取尺寸或重算位图',reads===0 && api.getState().mapBuilds===builds);
     await wait(240);await frame();
-    check('停止滚动后恢复原质量预算',mobileLight ? api.getState().light===4 : api.getState().full===3 && api.getState().light===1);
+    check('停止滚动后恢复原质量预算',androidAutoLight ? api.getState().light===4 : api.getState().full===3 && api.getState().light===1);
     check('恢复完整效果复用原位图',api.getState().mapBuilds===builds);
     api.setQuality('full');await wait(240);reads=0;
     document.dispatchEvent(new Event('scroll'));await wait(240);await frame();
-    check('手动 Full 请求滚动时不重新量尺寸',(mobileLight ? api.getState().light===4 : api.getState().full===4) && reads===0);
+    check('手动 Full 滚动保持完整效果且不重新量尺寸',api.getState().full===4 && reads===0);
     api.setQuality('auto');window.dispatchEvent(new Event('resize'));await frame();
     check('Auto 拖窗路径同样临时轻量',api.getState().light===4);
     api.destroy();await wait(240);await frame();
@@ -82,7 +82,7 @@ export async function runPerformanceChecks(output) {
       && api.getState().mapBuilds===enteredBuilds);
     clearInterval(keepScrolling);keepScrolling=undefined;
     await wait(240);await frame();
-    check('停下后新卡片遵循平台质量策略',entering.dataset.lgMode===(mobileLight ? 'light' : 'full'));
+    check('停下后新卡片遵循平台质量策略',entering.dataset.lgMode===(androidAutoLight ? 'light' : 'full'));
     api.destroy();
     check('销毁恢复可见性属性',!entering.hasAttribute('data-lg-visible') && api.getState().filters===0);
   } catch(error) {check('检查未中断：'+error.message,false);}

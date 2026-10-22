@@ -14,7 +14,7 @@ function reportState(state) {
   const layers = [];
   if (state.full) layers.push('液态折射 ' + state.full);
   if (state.light) layers.push('轻量折射 ' + state.light);
-  if (state.light && state.compatibility === 'android-light-experimental') layers.push('安卓试验支持');
+  if ((state.light || state.full) && state.compatibility === 'android-experimental') layers.push('安卓试验支持');
   $('state').textContent = layers.length ? layers.join(' · ') + ' · 共 ' + state.elements + ' 个玻璃面板'
     : state.solid ? '纯色模式 · 透明效果关闭' : '毛玻璃 · 兼容模式 · ' + state.elements + ' 个玻璃面板';
 }

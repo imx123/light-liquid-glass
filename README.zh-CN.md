@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-测试环境：2026-10-22，Windows、Node.js v26.12.1。可见性与安卓兼容分支通过 47 项 host 检查，Lens 贴图已通过 75 组逐字节对比。上一版于 2026-10-21 通过 Chromium 116/116 项检查；本轮浏览器检查、安卓 Edge 真机画面待验收，GPU 帧耗时尚未测量。详细结果见 [VALIDATION.md](demo/VALIDATION.md)。
+测试环境：2026-10-22，Windows、Node.js v26.12.1。可见性与安卓兼容分支通过 50 项 host 检查，Lens 贴图已通过 75 组逐字节对比。上一版于 2026-10-21 通过 Chromium 116/116 项检查；用户已反馈安卓 Edge Light 测试正常；本轮完整浏览器检查及安卓 Full 真机画面待验收，GPU 帧耗时尚未测量。详细结果见 [VALIDATION.md](demo/VALIDATION.md)。
 
 [English](README.md) · 中文
 
@@ -127,21 +127,21 @@ await runParameterChecks(document.querySelector('#check-results'));
 
 轻量档 `light` 使用单次位移，强度取 `optics.refraction`，默认 110。它与 Full 共用弧面贴图，省去 RGB 分通道和颜色合成。切换档位会复用贴图。
 
-Auto 静止时对每个控制器最多分配 3 块 Full 面板，其与视口相交的面积总和不超过 40 万 CSS 像素。可见面积较大的面板优先，同面积按挂载顺序；其余可见面板使用 Light。滚动或拖动窗口尺寸时，Full 面板暂用单次折射；IntersectionObserver 通知新卡片进入视口后，下一动画帧就启用 Light，不必等 120ms 停顿。离屏卡片释放 SVG 滤镜，关闭背景模糊、阴影和光斑，保留布局与内容节点；停止操作 120ms 后才恢复 Full 预算。手动 Full 保留显式渲染行为。相交检测是异步的，不检查遮挡与 CSS 透明度，也不代表帧率承诺。缺少 IntersectionObserver 时，每个滚动帧最多批量检查一次可见性。
+桌面 Auto 静止时对每个控制器最多分配 3 块 Full 面板，其与视口相交的面积总和不超过 40 万 CSS 像素。可见面积较大的面板优先，同面积按挂载顺序；其余可见面板使用 Light。滚动或拖动窗口尺寸时，Full 面板暂用单次折射；IntersectionObserver 通知新卡片进入视口后，下一动画帧就启用 Light，不必等 120ms 停顿。离屏卡片释放 SVG 滤镜，关闭背景模糊、阴影和光斑，保留布局与内容节点；停止操作 120ms 后才恢复 Full 预算。手动 Full 保留显式渲染行为。相交检测是异步的，不检查遮挡与 CSS 透明度，也不代表帧率承诺。缺少 IntersectionObserver 时，每个滚动帧最多批量检查一次可见性。
 
 Canvas 在初始化或尺寸变化时生成一张位移贴图。设距外缘向内的归一化距离为 `t = clamp(-d / band, 0, 1)`，Lens 强度为 `1 - sqrt(1 - (1 - t)^2)`；光学法线使用 1.5 倍圆角半径，并受短边半径限制。`full` 的 SVG 合成 RGB 后与基准采样混合，`light` 只做一次基准位移。文字和控件不经过背景滤镜。鼠标移动只更新 CSS 光斑位置，不会重新生成贴图。
 
 一个控制器共用一个 ResizeObserver 和一个鼠标动画帧。刷新先批量读取几何和圆角，再修改材质；尺寸不变时避免重复写样式。自动尺寸刷新不再扫描成员，动态增减元素仍需显式 `refresh()`。贴图使用最多 8 张的 LRU 缓存，保留最近访问的尺寸；生成时跳过中性中心，Lens 像素不变。每张贴图约限 36 万像素，单卡片超过 120 万 CSS 像素会回退毛玻璃。`getState().opticalModel` 固定为 `lens`。
 
-`node demo/refresh-checks.mjs` 运行 47 项 host 调度与兼容分支检查，`node demo/performance.mjs` 对比优化前后 75 组贴图并交替采样 CPU 耗时。它们不替代浏览器或 GPU 验证。演示页“运行全部自检”包含 9 项连续滚动进入与离屏释放检查；安卓 Light 使用对应平台策略，只针对 Full 的光学检查会跳过，不能算作 Full 已验收。
+`node demo/refresh-checks.mjs` 运行 50 项 host 调度与兼容分支检查，`node demo/performance.mjs` 对比优化前后 75 组贴图并交替采样 CPU 耗时。它们不替代浏览器或 GPU 验证。演示页“运行全部自检”包含 9 项连续滚动进入与离屏释放检查；安卓 Auto 使用 Light，手动 Full 运行三通道光学检查；未实际运行的检查不算已验收。
 
 运行 `node demo/benchmark.mjs` 可检查当前 Lens 贴图并测量 CPU 计算时间；它只包含像素数学和数组写入，不包含 PNG 编码、浏览器合成或 GPU 渲染。Full/Light 的背景模糊使用折射后的浏览器高斯模糊，默认 3px；没有复现 native 的有限 25 点采样核，也不声明与 native 逐像素一致。普通列表可使用 `data-liquid-glass="frost"`。
 
 ## 兼容范围
 
-桌面 Chromium 使用 SVG backdrop-filter 的 Full / Light 路径。安卓 Chromium（包括带 Android UA 的 Edge）试验开放单次 Light：自动、液态和轻量请求都使用 Light，不再因触屏直接回退；毛玻璃和纯色仍可手动选择，触摸事件不驱动鼠标光斑。`getState().compatibility` 返回 `android-light-experimental`、`desktop` 或 `unsupported`；安卓 Light 激活时演示页会标注“安卓试验支持”。iOS、Firefox 等环境继续回退，桌面粗主指针策略保持不变。
+桌面 Chromium 使用 SVG backdrop-filter 的 Full / Light 路径。安卓 Chromium（包括带 Android UA 的 Edge）试验开放 Full / Light：自动使用单次 Light，手动选择“液态折射”启用三通道 Full，“轻量折射”使用 Light，不再因触屏直接回退；毛玻璃和纯色仍可手动选择，触摸事件不驱动鼠标光斑。`getState().compatibility` 返回 `android-experimental`、`desktop` 或 `unsupported`；安卓折射激活时演示页会标注“安卓试验支持”。iOS、Firefox 等环境继续回退，桌面粗主指针策略保持不变。
 
-能力检测通过只说明它是候选环境，不能证明手机 GPU 正确渲染 SVG 背景采样。CSS 检测或 Canvas 创建失败时仍回退毛玻璃；安卓 Edge 的实际画面和流畅度需要真机确认。系统要求减少透明度时使用纯色，要求减少动画时隐藏鼠标光斑。
+能力检测通过只说明它是候选环境，不能证明手机 GPU 正确渲染 SVG 背景采样。CSS 检测或 Canvas 创建失败时仍回退毛玻璃；用户已反馈安卓 Edge Light 测试正常；Full 的画面和流畅度仍需真机确认。系统要求减少透明度时使用纯色，要求减少动画时隐藏鼠标光斑。
 
 贴图按统一的圆角矩形生成，四个角应使用相同的非椭圆圆角，推荐设置 px 单位的 `--lg-radius`。避免嵌套多层玻璃，或直接缩放、旋转玻璃元素，这些操作会改变采样与坐标关系。
 

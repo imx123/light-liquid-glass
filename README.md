@@ -1,6 +1,6 @@
 # light-liquid-glass
 
-Test environment: 2026-10-22, Windows, Node.js v26.12.1. Visibility and Android compatibility logic passed 47 host checks; the Lens implementation passed 75 byte-exact map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21. Updated browser checks and physical Android Edge rendering remain pending. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
+Test environment: 2026-10-22, Windows, Node.js v26.12.1. Visibility and Android compatibility logic passed 50 host checks; the Lens implementation passed 75 byte-exact map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21. The user reported successful Android Edge Light testing; updated browser checks and physical Android Full rendering remain pending. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
@@ -73,7 +73,7 @@ The module reports PASS/FAIL/SKIP lines for optics validation, clamping, map edg
 
 Light uses one displacement pass at `optics.refraction` (default 110), sharing the same curved-edge bitmap with Full. Full uses three passes for RGB dispersion. Switching modes reuses the bitmap.
 
-Auto assigns Full to at most 3 panels per controller, within a combined viewport-clipped area of 400,000 CSS pixels. Larger visible areas take priority; ties keep mount order. Other visible panels use Light. During scrolling or window resizing, Full panels temporarily use Light. IntersectionObserver activates newly entering panels as Light on the next animation frame, without waiting for the 120ms idle timer. Exiting panels release their SVG filter and suspend backdrop blur, shadow and pointer glow while retaining layout. After 120ms without further events, Auto restores its Full budget. Manual Full keeps its explicit rendering behavior. Intersection visibility is asynchronous and does not detect occlusion or CSS opacity; the budget makes no frame-rate promise. Environments without IntersectionObserver use one batched visibility check per scroll frame.
+Desktop Auto assigns Full to at most 3 panels per controller, within a combined viewport-clipped area of 400,000 CSS pixels. Larger visible areas take priority; ties keep mount order. Other visible panels use Light. During scrolling or window resizing, Full panels temporarily use Light. IntersectionObserver activates newly entering panels as Light on the next animation frame, without waiting for the 120ms idle timer. Exiting panels release their SVG filter and suspend backdrop blur, shadow and pointer glow while retaining layout. After 120ms without further events, Auto restores its Full budget. Manual Full keeps its explicit rendering behavior. Intersection visibility is asynchronous and does not detect occlusion or CSS opacity; the budget makes no frame-rate promise. Environments without IntersectionObserver use one batched visibility check per scroll frame.
 
 Canvas generates a displacement map when geometry changes. With normalized inward distance `t = clamp(-d / band, 0, 1)`, Lens strength is `1 - sqrt(1 - (1 - t)^2)`. Optical normals use 1.5 times the corner radius, capped at half the shorter side. Full combines RGB and blends it into the baseline sample; Light uses a single baseline displacement. The text and controls stay outside the backdrop filter. Pointer movement only updates CSS coordinates.
 
@@ -83,9 +83,9 @@ Run `node demo/benchmark.mjs` to check the current Lens map and measure CPU pixe
 
 ## Compatibility
 
-Full and Light use SVG backdrop-filter in desktop Chromium. Android Chromium, including Edge with an Android UA, has experimental Light support: Auto, Full and Light requests use single-pass Light, including on coarse-pointer devices. Frost and Solid remain explicit choices; touch events do not animate the mouse-follow glow. `getState().compatibility` reports `android-light-experimental`, `desktop` or `unsupported`. The demo labels active Android Light accordingly. iOS, Firefox and other unsupported engines keep their prior fallback. Desktop coarse-pointer policy is unchanged.
+Full and Light use SVG backdrop-filter in desktop Chromium. Android Chromium, including Edge with an Android UA, has experimental Full / Light support, including on coarse-pointer devices: Auto uses single-pass Light; manual Full enables three-channel refraction; Light keeps single-pass refraction. Frost and Solid remain explicit choices; touch events do not animate the mouse-follow glow. `getState().compatibility` reports `android-experimental`, `desktop` or `unsupported`. The demo labels active Android refraction accordingly. iOS, Firefox and other unsupported engines keep their prior fallback. Desktop coarse-pointer policy is unchanged.
 
-A successful feature check is only a candidate signal; it does not prove that SVG backdrop sampling renders correctly on a phone. Failed CSS capability checks or Canvas setup fall back to frost. Physical Android Edge rendering and GPU performance still require testing. Reduced transparency selects solid material, and reduced motion suppresses the pointer glow.
+A successful feature check is only a candidate signal; it does not prove that SVG backdrop sampling renders correctly on a phone. Failed CSS capability checks or Canvas setup fall back to frost. The user reported successful Android Edge Light testing; physical Full rendering and GPU performance still require testing. Reduced transparency selects solid material, and reduced motion suppresses the pointer glow.
 
 Use equal, non-elliptical corner radii, preferably a px value for `--lg-radius`. Avoid nested glass or scaling and rotating the glass element, which changes backdrop sampling and pointer coordinates.
 
@@ -95,7 +95,7 @@ A strict CSP must allow the local modules, generated `data:` images and required
 
 Demo files, checks and the validation record are under `demo/`.
 
-`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the platform-aware browser checks, including 9 scroll-entry and offscreen-release checks; this expanded suite remains pending. Full-only optical checks are skipped on Android Light rather than reported as Full coverage. `node demo/refresh-checks.mjs` runs 47 host scheduler/compatibility checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates these updates.
+`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the platform-aware browser checks, including 9 scroll-entry and offscreen-release checks; this expanded suite remains pending. Android Auto stays on Light; manual Full runs the three-channel optical checks. Checks that have not been run are not counted as accepted. `node demo/refresh-checks.mjs` runs 50 host scheduler/compatibility checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates these updates.
 
 Code and documentation were written with AI assistance. The demo background is AI generated.
 
