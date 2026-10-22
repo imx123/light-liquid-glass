@@ -1,34 +1,30 @@
 # light-liquid-glass
 
-Test environment: 2026-10-22, Windows, Node.js v26.12.1. Visibility and Android compatibility logic passed 69 host checks; the Lens implementation passed 75 byte-exact map comparisons. The prior version passed 116/116 Chromium checks on 2026-10-21. The user reported successful Android Edge Light testing and approved the revised Firefox prototype appearance by visual inspection. Updated browser checks and physical Android Full rendering remain pending. GPU frame rates remain unmeasured. See [VALIDATION.md](demo/VALIDATION.md).
+Test environment: Windows, Node.js v26.12.1, 2026-10-22. The host checks passed 69 cases, and 75 Lens map comparisons matched byte for byte. An earlier version passed 116/116 Chromium checks on 2026-10-21.
+
+The user reported that Android Edge Light worked and approved the revised Firefox prototype by visual inspection. The updated browser suite and physical Android Full rendering still need testing. GPU frame rates have not been measured. Results and test scope are in [VALIDATION.md](demo/VALIDATION.md).
 
 English · [中文说明](README.zh-CN.md)
 
-A small liquid glass effect for plain HTML, CSS and JavaScript. A circular Lens curve concentrates refraction near rounded edges, blends a small amount of RGB dispersion into the baseline sample, and keeps the center mostly clear.
-
-Designed for websites. The core files and both READMEs live at the repository root; demo assets, validation notes and checks are in `demo/`. Run the commands below from the repository root.
+A liquid glass effect for websites, built with plain HTML, CSS and JavaScript. Refraction follows the rounded edges, with a small amount of RGB dispersion and a lightly blurred center. A soft glow follows the pointer and disappears when it leaves the panel.
 
 ![Liquid glass preview](demo/preview.png)
 
-The effect started in a chat interface and is packaged as two files. A soft glow follows the pointer while it is inside a panel. The glow disappears on exit. There are no framework, npm, CDN or WebGL dependencies.
+The effect started in a chat interface and now ships as `glass.js` and `glass.css`. It has no framework, npm, CDN or WebGL dependencies. The screenshot predates the latest changes.
 
 ## Run the demo
 
-With Node.js 18+, run `node demo/server.mjs` and open <http://localhost:4178>. The server binds to loopback by default. Sliders control refraction (0–200), dispersion (0–50), edge width (1–120px) and liquid backdrop blur (0–12px, step 0.1). Values update during dragging; the effect applies on release. Arrow keys also work. Reset restores 110 / 14 / 15px / 2px while preserving input, dynamic cards and the current quality. Reloading restores default parameters. The demo also includes a mode selector and a button to run the browser checks.
+With Node.js 18+, run `node demo/server.mjs` from the repository root and open <http://localhost:4178>. The server listens on loopback by default and only serves allowlisted demo files.
 
-For phone testing, connect the phone and computer to a mutually reachable LAN. In PowerShell, set `$env:HOST="your LAN IPv4"; $env:PORT="4179"; node demo/server.mjs`, then open `http://your-LAN-IPv4:4179/` on the phone. The server only exposes allowlisted demo files.
+Use the selector to switch modes. The sliders adjust refraction (0 to 200), dispersion (0 to 50), edge width (1 to 120px) and liquid backdrop blur (0 to 12px, in steps of 0.1). Values update as you drag; the effect changes when you release the slider. Arrow keys work too.
 
-## Firefox background-image prototype
+Reset restores 110 / 14 / 15px / 2px. It keeps your input, added cards and selected quality. Reloading restores the default parameters. You can also add or remove cards and run the browser checks from the demo.
 
-The demo selects this prototype on desktop and Android Firefox. Use `/?renderer=background` to preview it in another browser, or `/?renderer=native` for native backdrop sampling. It only refracts a supplied background image; text, video and overlapping cards behind the panel are not captured. Auto uses Light; manual Full enables RGB refraction. Both modes release offscreen copies and align visible copies on each scroll frame. Defaults remain 15px / 2px. Firefox rendering and GPU performance are not yet verified.
-
-Pass `background: { image, overlayTop, overlayBottom, color }` to createLiquidGlass after decoding the image. Only image is required; the other fields provide optional gradient endpoints and a base color. The page must use the same viewport-fixed, centered cover image and gradient, as shown in the demo stylesheet. The prototype applies ordinary SVG filters to a decorative copy and leaves the panel text and controls independent. Arbitrary CSS backgrounds, transformed or nested glass are outside its scope. getState().renderer reports background-image or backdrop; the prototype compatibility is background-image-experimental, or unsupported when its feature check fails. The demo adds 17 prototype DOM and optical checks to its browser checks; they do not replace visual acceptance. See the [Chinese example](README.zh-CN.md).
-
-The prototype demo defaults to a 55% tint overlay, with a 100% option for comparison. Blur stays at 2px and the edge band stays at 15px. The core overlay uses `--lg-image-tint-opacity` (default 1); it does not change panel or text opacity. Browser checks list skipped cases and their reasons. Native backdrop checks may still skip on Firefox; the prototype separately checks RGB channels and Lens pixels, and skipped cases are not counted as passed.
+To test on a phone, put both devices on a LAN where they can reach each other. In PowerShell, run `$env:HOST="your LAN IPv4"; $env:PORT="4179"; node demo/server.mjs`, then open `http://your-LAN-IPv4:4179/` on the phone.
 
 ## Add it to a page
 
-Copy `glass.css` and `glass.js` into your static assets. Keep your existing server and layout, include the stylesheet, mark the panels, then initialize the module:
+Copy `glass.css` and `glass.js` into your static assets, include the stylesheet and mark the panels:
 
 ```html
 <link rel="stylesheet" href="./glass.css">
@@ -46,64 +42,84 @@ Copy `glass.css` and `glass.js` into your static assets. Keep your existing serv
 </script>
 ```
 
-A detailed backdrop makes refraction easier to see. The stylesheet only targets `.lg-glass`; it does not reset body styles, controls or layout. The ::before pseudo-element draws the pointer glow; check for conflicts with existing components.
+Use a backdrop with visible texture or lines to make the refraction easier to see. The stylesheet targets `.lg-glass` without resetting the body, controls or layout. The ::before pseudo-element draws the pointer glow, so check whether your component already uses it. The demo background and server are optional.
 
 ## Control the material
 
-`createLiquidGlass({ root, quality, optics, onChange })` returns `setQuality()`, `refresh()`, `getState()` and `destroy()`. Quality can be `auto`, `full`, `light`, `frost` or `solid`. Full and Light fall back when the environment cannot use refraction.
+`createLiquidGlass({ root, quality, optics, onChange })` returns `setQuality()`, `refresh()`, `getState()` and `destroy()`. Choose `auto`, `full`, `light`, `frost` or `solid`. Full and Light fall back when refraction is unavailable. Set `data-liquid-glass="frost"` to keep an individual panel frosted.
 
-`optics` adjusts the shape of the effect: `refraction` (default 110, range 0 to 200), `dispersion` (14, 0 to 50) and `edgeWidth` (15, 1 to 120). Only finite numbers are accepted. Strings, `NaN`, `Infinity` and other non-numbers throw a `TypeError` before the controller creates any resource; finite values are clamped to the range. `edgeWidth` is a CSS-pixel band, including when a large panel rasterizes its displacement map at a lower resolution.
+`optics` accepts `refraction` (default 110, range 0 to 200), `dispersion` (14, 0 to 50) and `edgeWidth` (15, 1 to 120). Values must be finite numbers. Strings, `NaN`, `Infinity` and other non-numbers throw a `TypeError` before resources are created; finite values outside the range are clamped. The `edgeWidth` band stays in CSS pixels when a large panel uses a lower-resolution map. To change optics, destroy the controller and create another one.
 
-Lens is now the only optical model; the previous broad curve has been removed. With `D = dispersion / 50` and channel indices 0, 1, 2, scales are `refraction * (1 + (channel - 1) * D * 0.006)`, giving approximately 109.8152/110/110.1848 by default. The RGB result is blended into the green-channel baseline with weight `0.20 * D` (zero when D ≤ 0.001), or 5.6% by default. Parameter names and ranges are retained, but dispersion values now have a different visual meaning.
+A container usually needs one controller. A second controller skips elements that already have an owner. The root itself is included if it carries the marker.
 
-Set `data-liquid-glass="frost"` to keep a particular panel frosted. Use one controller per container; another controller will skip elements that already have an owner. The root itself is included when it carries the marker.
+Size changes update automatically. Call `refresh()` after adding or removing panels, or after changing a corner radius without changing size. On teardown, `destroy()` releases listeners, observers, timers, animation frames, SVG nodes and cached maps, then restores the original inline styles and state attributes. Repeated calls are safe. Create a new controller to mount again.
 
-Sizes update automatically. Call `refresh()` after mounting or removing elements, or after changing radius without changing size. On teardown, `destroy()` releases listeners, the observer, timers, animation frames, SVG nodes and cache. It restores the original inline styles and state attributes and can be called more than once. Create a new controller to mount again.
+The first `onChange` runs synchronously during construction. If setup or that callback throws, the controller restores the elements and releases its resources before rethrowing the original error. Later callback errors also propagate; you can use the returned controller to clean up.
 
-The first `onChange` runs synchronously during construction. If it or setup throws, the controller rolls back its resources and element changes before rethrowing the original error. Later callback errors still propagate; the returned controller remains available for explicit teardown.
+The engine does not use application storage or save preferences. `demo.js` shows how to connect the selector to localStorage.
 
-The engine does not read application storage or save preferences. `demo.js` contains the selector and localStorage example.
+CSS variables control the material: `--lg-radius` (28px), `--lg-center-blur` (2px), `--lg-frost-blur` (6px), `--lg-tint`, `--lg-solid`, `--lg-glow-width` (210px), `--lg-glow-height` (130px) and `--lg-glow-opacity` (1). The edge band is up to 15 CSS pixels. The [Chinese guide](README.zh-CN.md) has a full CSS example.
 
-CSS variables are `--lg-radius` (28px), `--lg-center-blur` (2px), `--lg-frost-blur` (6px), `--lg-tint`, `--lg-solid`, `--lg-glow-width` (210px), `--lg-glow-height` (130px), `--lg-glow-opacity` (1). The default edge band is up to 15 CSS pixels. Full examples are in the [Chinese guide](README.zh-CN.md).
+## Firefox background-image prototype
 
-## Browser checks
+On desktop and Android Firefox, the demo draws a copy of the supplied background inside each glass panel and applies ordinary SVG filters to it. The text and controls stay separate. This path refracts the background image; it cannot capture text, video or overlapping cards behind the panel.
 
-Open the demo and click “运行全部自检” to run the lifecycle, parameter, quality and integration checks. To run only the parameter module in the browser console:
+Open `/?renderer=background` to try it in another browser, or `/?renderer=native` to return to native backdrop sampling. Auto uses Light; manual Full adds RGB refraction. Both modes remove offscreen copies and realign visible copies on each scroll frame. The defaults are still 15px / 2px. The user has approved the appearance by visual inspection; full Firefox rendering checks and GPU measurements remain pending.
+
+Decode the image before passing `background: { image, overlayTop, overlayBottom, color }` to createLiquidGlass. Only image is required. The other fields set a vertical gradient and base color. The page and the copies must use the same viewport-fixed, centered cover image, gradient and color. See the demo stylesheet and [Chinese example](README.zh-CN.md). Arbitrary CSS backgrounds, transformed panels and nested glass are outside the prototype's scope.
+
+getState().renderer reports background-image or backdrop. Prototype compatibility is background-image-experimental, or unsupported if the feature check fails.
+
+The demo starts with a 55% tint overlay. Select 100% to compare the original tint. This changes the decorative overlay, leaving panel and text opacity alone; blur stays at 2px and the edge band at 15px. The core variable is `--lg-image-tint-opacity`, with a default of 1.
+
+The demo has 17 checks for this path, including RGB channels and Lens pixels. Native backdrop checks may still skip on Firefox. Each skipped case lists its reason and is excluded from the pass count. These checks do not replace a visual review.
+
+## How it works
+
+Light makes one displacement pass at `optics.refraction`, which defaults to 110. Full uses three passes for RGB dispersion. Both modes share a curved-edge bitmap, so switching modes can reuse it.
+
+Canvas creates the map when geometry changes. For inward distance `t = clamp(-d / band, 0, 1)`, the Lens curve is `1 - sqrt(1 - (1 - t)^2)`. Optical normals use 1.5 times the corner radius, capped at half the shorter side. Full blends the RGB result with the baseline sample. Text and controls stay outside the backdrop filter; pointer movement only changes the glow's CSS coordinates.
+
+Lens is the only optical model. With `D = dispersion / 50` and channel indices 0, 1, 2, displacement scales are `refraction * (1 + (channel - 1) * D * 0.006)`. The defaults are about 109.8152/110/110.1848. The RGB blend weight is `0.20 * D`, or zero when D ≤ 0.001, giving 5.6% at the default setting. The older broad curve has been removed. Parameter names and ranges remain the same, though dispersion values have a different visual meaning.
+
+Desktop Auto gives Full to at most 3 panels per controller, within 400,000 CSS pixels of combined visible area. Larger areas take priority; ties follow mount order. Other visible panels use Light. Scrolling or resizing temporarily changes Full panels to Light. IntersectionObserver activates entering panels on the next animation frame. Offscreen panels release their SVG filter, blur, shadow and glow while keeping their layout. After 120ms without another event, Auto restores its Full budget. Manual Full keeps its requested mode.
+
+IntersectionObserver reports visibility asynchronously and does not detect occlusion or CSS opacity. Without it, the controller checks visibility once per scroll frame. These limits do not guarantee a frame rate.
+
+Each controller shares one ResizeObserver and one pointer animation frame. It reads geometry and styles before writing material changes, avoids writes on an unchanged refresh and keeps up to eight maps in an LRU cache. Automatic geometry updates do not rescan panel membership; use `refresh()` after adding or removing panels. Map generation skips the neutral center without changing Lens pixels. Maps are capped at about 360,000 pixels; panels over 1,200,000 CSS pixels fall back to frost. `getState().opticalModel` is always `lens`.
+
+Full and Light apply browser Gaussian blur after refraction, at 2px by default. The implementation does not reproduce the native finite 25-tap kernel or claim pixel equality with native rendering. Ordinary lists can use `data-liquid-glass="frost"`.
+
+## Compatibility
+
+Desktop Chromium uses SVG backdrop-filter for Full and Light. Desktop devices with a coarse primary pointer keep the frosted fallback.
+
+Android Chromium, including Edge with an Android UA, has experimental Full and Light support on touch devices. Auto uses Light; manual Full uses three channels. Frost and Solid remain available, and touch events do not animate the pointer glow. `getState().compatibility` reports `android-experimental`, `desktop` or `unsupported` for the native path. The demo labels active Android refraction.
+
+Firefox uses the separate background-image prototype described above when the demo enables it. Without that option, the core keeps its native fallback on Firefox, iOS and other unsupported engines.
+
+CSS capability or Canvas setup failures fall back to frost. A successful feature check still needs a rendering test on the device. Android Edge Light has user testing; Android Full and GPU performance need further checks. Reduced transparency selects Solid, and reduced motion hides the pointer glow.
+
+Use the same non-elliptical radius on all four corners, preferably a px value for `--lg-radius`. Nested glass and scaled or rotated panels can change sampling and pointer coordinates.
+
+For a strict CSP, allow the local modules, generated `data:` images and required dynamic style updates. Add the needed rules to your existing policy. Servers with a file whitelist must include the effect files and backdrop.
+
+## Files and checks
+
+The core files and both READMEs are at the repository root. The demo, background image, validation record and check scripts are under `demo/`. `index.html`, `demo.js` and `demo.css` make up the demo; `manifest.sha256` records the file hashes.
+
+Click "运行全部自检" for lifecycle, parameter, quality, integration and optical checks. The suite includes 9 checks for panels entering and leaving the viewport during continuous scrolling. Android Auto stays on Light; manual Full runs the three-channel checks. The expanded suite has not yet had a full browser run.
+
+To run just the parameter checks in the browser console:
 
 ```js
 const { runParameterChecks } = await import('./parameters-checks.js');
 await runParameterChecks(document.querySelector('#check-results'));
 ```
 
-The module reports PASS/FAIL/SKIP lines for optics validation, clamping, map edge width, channel scales and the glow variables. It skips optical checks when the environment falls back from Full. `checks.js` covers the controller lifecycle.
+The output uses PASS/FAIL/SKIP for optics validation, clamping, map edge width, channel scales and glow variables. Optical checks skip when Full is unavailable. `checks.js` covers the controller lifecycle.
 
-## How it works
-
-Light uses one displacement pass at `optics.refraction` (default 110), sharing the same curved-edge bitmap with Full. Full uses three passes for RGB dispersion. Switching modes reuses the bitmap.
-
-Desktop Auto assigns Full to at most 3 panels per controller, within a combined viewport-clipped area of 400,000 CSS pixels. Larger visible areas take priority; ties keep mount order. Other visible panels use Light. During scrolling or window resizing, Full panels temporarily use Light. IntersectionObserver activates newly entering panels as Light on the next animation frame, without waiting for the 120ms idle timer. Exiting panels release their SVG filter and suspend backdrop blur, shadow and pointer glow while retaining layout. After 120ms without further events, Auto restores its Full budget. Manual Full keeps its explicit rendering behavior. Intersection visibility is asynchronous and does not detect occlusion or CSS opacity; the budget makes no frame-rate promise. Environments without IntersectionObserver use one batched visibility check per scroll frame.
-
-Canvas generates a displacement map when geometry changes. With normalized inward distance `t = clamp(-d / band, 0, 1)`, Lens strength is `1 - sqrt(1 - (1 - t)^2)`. Optical normals use 1.5 times the corner radius, capped at half the shorter side. Full combines RGB and blends it into the baseline sample; Light uses a single baseline displacement. The text and controls stay outside the backdrop filter. Pointer movement only updates CSS coordinates.
-
-A controller shares one ResizeObserver and one pointer animation frame. Geometry and style reads are batched before material writes. Unchanged refreshes avoid redundant writes; automatic geometry updates do not rescan element membership. Call `refresh()` explicitly after mounting or removing panels. An eight-map LRU cache retains recently used sizes. Map generation skips the neutral center while preserving Lens pixels; it remains capped at approximately 360,000 pixels, with panels over 1,200,000 CSS pixels falling back to frost. `getState().opticalModel` is always `lens`.
-
-Run `node demo/benchmark.mjs` to check the current Lens map and measure CPU pixel math and array writes. PNG encoding, compositing and GPU sampling are excluded. Full and Light apply browser Gaussian blur after refraction, at 2px by default. This does not reproduce the native finite 25-tap blur kernel or claim pixel equality with native rendering. Ordinary lists can use `data-liquid-glass="frost"`.
-
-## Compatibility
-
-Full and Light use SVG backdrop-filter in desktop Chromium. Android Chromium, including Edge with an Android UA, has experimental Full / Light support, including on coarse-pointer devices: Auto uses single-pass Light; manual Full enables three-channel refraction; Light keeps single-pass refraction. Frost and Solid remain explicit choices; touch events do not animate the mouse-follow glow. `getState().compatibility` reports `android-experimental`, `desktop` or `unsupported`. The demo labels active Android refraction accordingly. iOS, Firefox and other unsupported engines keep their prior fallback. Desktop coarse-pointer policy is unchanged.
-
-A successful feature check is only a candidate signal; it does not prove that SVG backdrop sampling renders correctly on a phone. Failed CSS capability checks or Canvas setup fall back to frost. The user reported successful Android Edge Light testing; physical Full rendering and GPU performance still require testing. Reduced transparency selects solid material, and reduced motion suppresses the pointer glow.
-
-Use equal, non-elliptical corner radii, preferably a px value for `--lg-radius`. Avoid nested glass or scaling and rotating the glass element, which changes backdrop sampling and pointer coordinates.
-
-A strict CSP must allow the local modules, generated `data:` images and required dynamic style updates. Keep the existing protections and add only the rules needed. Register the effect files and backdrop if your static server uses a whitelist. The included background, demo and server are optional.
-
-## Files and checks
-
-Demo files, checks and the validation record are under `demo/`.
-
-`glass.js` and `glass.css` are the material. `index.html`, `demo.js` and `demo.css` make up the demo. Click “运行全部自检” to run the platform-aware browser checks, including 9 scroll-entry and offscreen-release checks; this expanded suite remains pending. Android Auto stays on Light; manual Full runs the three-channel optical checks. Checks that have not been run are not counted as accepted. `node demo/refresh-checks.mjs` runs 69 host scheduler/compatibility checks; `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and reports paired CPU timings. `benchmark.mjs` checks current Lens math. `manifest.sha256` lists file hashes. The preview predates these updates.
+Run `node demo/refresh-checks.mjs` for the 69 host scheduling and compatibility checks. `node demo/performance.mjs` compares 75 Lens maps with the pre-optimization reference and samples CPU time. `benchmark.mjs`, run with `node demo/benchmark.mjs`, checks the current Lens math and times pixel calculations and array writes. These host measurements exclude PNG encoding, browser compositing and GPU sampling.
 
 Code and documentation were written with AI assistance. The demo background is AI generated.
 
